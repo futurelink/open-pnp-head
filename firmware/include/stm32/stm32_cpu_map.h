@@ -12,8 +12,8 @@
 #define ROTARY_4_STEP_BIT   13
 #define ROTARY_STEP_MASK    ((1 << ROTARY_1_STEP_BIT) | (1 << ROTARY_2_STEP_BIT) | \
                             (1 << ROTARY_3_STEP_BIT) | (1 << ROTARY_4_STEP_BIT))
-#define LINEAR_1_STEP_BIT   14
-#define LINEAR_2_STEP_BIT   15
+#define LINEAR_1_STEP_BIT   15
+#define LINEAR_2_STEP_BIT   14
 #define LINEAR_STEP_MASK    ((1 << LINEAR_1_STEP_BIT) | (1 << LINEAR_2_STEP_BIT))
 #define STEP_MASK           (ROTARY_STEP_MASK | LINEAR_STEP_MASK)
 
@@ -26,8 +26,8 @@
 #define ROTARY_4_DIR_BIT        7
 #define ROTARY_DIRECTION_MASK  ((1 << ROTARY_1_DIR_BIT) | (1 << ROTARY_2_DIR_BIT) | \
                                 (1 << ROTARY_3_DIR_BIT) | (1 << ROTARY_4_DIR_BIT))
-#define LINEAR_1_DIR_BIT        8
-#define LINEAR_2_DIR_BIT        9
+#define LINEAR_1_DIR_BIT        9
+#define LINEAR_2_DIR_BIT        8
 #define LINEAR_DIR_MASK         ((1 << LINEAR_1_DIR_BIT) | (1 << LINEAR_2_DIR_BIT))
 #define DIRECTION_MASK          (ROTARY_DIRECTION_MASK | LINEAR_DIR_MASK)
 

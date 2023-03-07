@@ -18,21 +18,29 @@ void Motion::discard_current_block() {
     current_block = nullptr;
 }
 
-void Motion::move(uint8_t nozzle, float depth) {
+void Motion::move(uint8_t nozzle, float depth, float speed) {
     if (nozzle > ROTARY_AXIS_N - 1) return; // Invalid nozzle
     if (current_block == nullptr) {
         auto block = (motion_block_t *) malloc(sizeof(motion_block_t));
         auto motor_axis = ROTARY_AXIS_N + (uint8_t) floorf((float) nozzle / 2);
-        auto position = state->get_positions()[motor_axis];
+        auto position_steps = state->get_positions()[motor_axis];
 
         // - in all cases we need to return to 0 (-position) and then
         // - for even nozzles we need to go CCW i.e. negative
         // - for odd nozzles we need to go CW i.e. positive
+#ifndef ROCKER_HEAD
         auto steps_per_mm = (float) settings->get_steps_per_mm(motor_axis);
         auto depth_steps = depth * steps_per_mm * ((nozzle % 2) ? 1.0f : -1.0f);
         auto target_steps = lroundf((float) depth_steps);
-        auto delta = (float) (target_steps - position) / steps_per_mm;
-        auto delta_steps = (uint32_t) abs(target_steps - position);
+        auto delta = (float) (target_steps - position_steps) / steps_per_mm;
+        auto delta_steps = (uint32_t) abs(target_steps - position_steps);
+#else
+        auto depth_signed = depth * ((nozzle % 2) ? 1.0f : -1.0f);
+        auto position = settings->get_rocker_axis_position(position_steps);
+        auto delta = depth_signed - position;
+        auto delta_steps = lroundf(settings->get_rocker_axis_steps(position, depth_signed));
+#endif
+
         if (delta_steps == 0) { // Nothing to add...
             free(block);
             return;
@@ -41,9 +49,9 @@ void Motion::move(uint8_t nozzle, float depth) {
         block->direction_bits = 0;
         block->units = fabsf(delta);
         block->acceleration = settings->get_acceleration(motor_axis);    // mm/s^2
-        block->speed = settings->get_speed(motor_axis);                  // mm/s
+        block->speed = min(speed, settings->get_speed(motor_axis));      // mm/s
 
-        for (uint8_t idx = 0; idx < AXIS_N; idx++) {
+        for (uint8_t idx = 0; idx < (uint8_t) AXIS_N; idx++) {
             block->steps[idx] = (idx == motor_axis) ? delta_steps : 0;
         }
 
@@ -55,7 +63,7 @@ void Motion::move(uint8_t nozzle, float depth) {
     }
 }
 
-void Motion::rotate(uint8_t nozzle, float angle) {
+void Motion::rotate(uint8_t nozzle, float angle, float speed) {
     if (nozzle > ROTARY_AXIS_N - 1) return; // Invalid nozzle
     if (current_block == nullptr) {
         auto block = (motion_block_t *) malloc(sizeof(motion_block_t));
@@ -71,8 +79,8 @@ void Motion::rotate(uint8_t nozzle, float angle) {
         block->direction_bits = 0;
         block->units = fabsf(delta);
         block->acceleration = settings->get_acceleration(nozzle);   // degrees/s^2
-        block->speed = settings->get_speed(nozzle);                 // degrees/s
-        for (uint8_t idx = 0; idx < AXIS_N; idx++) {
+        block->speed = min(speed, settings->get_speed(nozzle));     // degrees/s
+        for (uint8_t idx = 0; idx < (uint8_t) AXIS_N; idx++) {
             block->steps[idx] = (idx == nozzle) ? delta_steps : 0;
         }
         block->step_event_count = block->steps[nozzle];

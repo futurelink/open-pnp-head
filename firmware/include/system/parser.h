@@ -4,7 +4,8 @@
 #define PARSER_H
 
 #define WORD_A      0
-#define WORD_Z      1
+#define WORD_F      1
+#define WORD_Z      2
 
 typedef struct line_state_t {
     char        letter;
@@ -21,6 +22,7 @@ typedef struct parser_state_t {
     uint8_t         nozzle;         // Pick-Place active nozzle
     float           depth;          // Pick-Place cycle var indicates how deep the nozzle should go
     float           angle;          // Pick-Place rotate cycle var indicates rotation angle
+    float           feed;           // Pick-Place or Move cycle feed rate
 } parser_state_t;
 
 #endif // PARSER_H

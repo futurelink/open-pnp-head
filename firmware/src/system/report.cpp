@@ -20,6 +20,7 @@ Report::Report(Settings *settings, Serial *serial, State *state) {
         case STATE_CYCLE_PICK: serial->print_string("Pick"); break;
         case STATE_CYCLE_PLACE: serial->print_string("Place"); break;
         case STATE_CYCLE_ROTATE: serial->print_string("Rotate"); break;
+        case STATE_CYCLE_MOVE: serial->print_string("Move"); break;
         case STATE_HOMING: serial->print_string("Home"); break;
         case STATE_ALARM: serial->print_string("Alarm"); break;
         default: break;

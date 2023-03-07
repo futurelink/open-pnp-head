@@ -28,7 +28,14 @@ void Control::init() {
 uint8_t Control::parse_line(char *line) {
     uint8_t result = STATUS_OK;
     uint8_t char_counter = 0;
+
+    // Initialize line state
     auto line_state = &parser_state.line_state;
+    line_state->command = COMMAND_NONE;
+    line_state->word_bits = 0;
+    line_state->letter = 0;
+
+    // Parse the line
     while (line[char_counter] != 0) {
         line_state->letter = line[char_counter];
         if ((line_state->letter < 'A') || (line_state->letter > 'Z')) return STATUS_EXPECTED_COMMAND_LETTER;
@@ -48,12 +55,16 @@ uint8_t Control::parse_line(char *line) {
             case 'R': line_state->command = COMMAND_ROTATE; parser_state.nozzle = line_state->int_value; break;
             case 'P': line_state->command = COMMAND_PICK; parser_state.nozzle = line_state->int_value; break;
             case 'L': line_state->command = COMMAND_PLACE; parser_state.nozzle = line_state->int_value; break;
+            case 'M': line_state->command = COMMAND_MOVE; parser_state.nozzle = line_state->int_value; break;
             case 'V': result = process_relay(); break;
             default: result = process_parameter();
         }
     }
 
-    result = callbacks->execute_command(&parser_state);
+    // Command must have valid nozzle number
+    if (line_state->command) if (parser_state.nozzle > ROTARY_AXIS_N) return STATUS_CODE_MAX_VALUE_EXCEEDED;
+
+    if (result == STATUS_OK) result = callbacks->execute_command(&parser_state);
 
     return result;
 }
@@ -69,14 +80,35 @@ uint8_t Control::process_parameter() {
     auto line_state = &parser_state.line_state;
     uint8_t word_bit = 0;
     switch(line_state->letter){
-        case 'Z': word_bit = WORD_Z; parser_state.depth = line_state->value; break;
+        case 'Z':
+            if (line_state->value > settings->get_linear_max_travel())
+                return STATUS_CODE_MAX_VALUE_EXCEEDED;
+            word_bit = WORD_Z;
+            parser_state.depth = line_state->value;
+            break;
         case 'A': word_bit = WORD_A; parser_state.angle = line_state->value; break;
+        case 'F': word_bit = WORD_F; parser_state.feed = line_state->value; break;
         default: return STATUS_CODE_UNSUPPORTED_COMMAND;
     }
 
     // Variable 'word_bit' is always assigned, if the non-command letter is valid.
     if ((line_state->word_bits & (1 << word_bit)) != 0) return STATUS_CODE_WORD_REPEATED; // [Word repeated]
     line_state->word_bits |= (1 << word_bit);
+
+    // Require feed rate on move commands
+    if ((line_state->command != COMMAND_NONE) && ((line_state->word_bits & (1 << WORD_F)) == 0))
+        return STATUS_CODE_UNDEFINED_FEED_RATE;
+
+    // Check for parameters that are required by command
+    if (line_state->command != COMMAND_NONE) {
+        if (line_state->command == COMMAND_ROTATE) {
+            // Require angle on rotation command
+            if ((line_state->word_bits & (1 << WORD_A)) == 0) return STATUS_CODE_INVALID_TARGET;
+        } else {
+            // Require depth on move or pick-place commands
+            if ((line_state->word_bits & (1 << WORD_Z)) == 0) return STATUS_CODE_INVALID_TARGET;
+        }
+    }
 
     return STATUS_OK;
 }
@@ -119,13 +151,15 @@ void Control::execute_realtime() {
     if (state->get_pick_place_state() & STATE_PNP_CYCLE_ALARM) {
         state->set_pick_place_state(0);
         state->set_state(STATE_ALARM);
-    } else if (state->has_state(STATE_CYCLE_PICK | STATE_CYCLE_PLACE)) {
+    }
+
+    else if (state->has_state(STATE_CYCLE_PICK | STATE_CYCLE_PLACE)) {
         if (!state->get_pick_place_state()) {
             // Pick-place cycle can only be started when nozzle is in neutral position
             if (motion->check_nozzle_in_position(parser_state.nozzle)) {
                 // Start the cycle - move down to pick or place a component
                 state->set_active_nozzle(parser_state.nozzle);
-                motion->move(parser_state.nozzle, parser_state.depth);
+                motion->move(parser_state.nozzle, parser_state.depth, parser_state.feed);
                 state->set_pick_place_state(STATE_PNP_CYCLE_MOVE_DOWN);
                 steppers_start();
             } else {
@@ -153,7 +187,7 @@ void Control::execute_realtime() {
             // If unsuccessful - then set to alarm state, otherwise go up
             if (state->is_vac_wait_timeout()) state->set_pick_place_state(STATE_PNP_CYCLE_ALARM);
             else if (vacuum->has_component(state->get_active_nozzle())) {
-                motion->move(state->get_active_nozzle(), 0);
+                motion->move(state->get_active_nozzle(), 0, parser_state.feed);
                 state->set_pick_place_state(STATE_PNP_CYCLE_MOVE_UP);
                 steppers_start();
             }
@@ -164,11 +198,26 @@ void Control::execute_realtime() {
                 state->set_state(STATE_IDLE);
             }
         }
-    } else if (state->has_state(STATE_CYCLE_ROTATE)) {
+    }
+
+    else if (state->has_state(STATE_CYCLE_MOVE)) {
         if (!state->get_pick_place_state()) {
-            motion->rotate(parser_state.nozzle, parser_state.angle);
+            motion->move(parser_state.nozzle, parser_state.depth,parser_state.feed);
+            state->set_pick_place_state(STATE_PNP_CYCLE_MOVE);
             steppers_start();
+        } else if (state->get_pick_place_state() & STATE_PNP_CYCLE_MOVE) {
+            if (state->has_state(STATE_CYCLE_STOP)) {
+                state->set_pick_place_state(0);
+                state->set_state(STATE_IDLE);
+            }
+        }
+    }
+
+    else if (state->has_state(STATE_CYCLE_ROTATE)) {
+        if (!state->get_pick_place_state()) {
+            motion->rotate(parser_state.nozzle, parser_state.angle, parser_state.feed);
             state->set_pick_place_state(STATE_PNP_CYCLE_ROTATING);
+            steppers_start();
         } else if (state->get_pick_place_state() & STATE_PNP_CYCLE_ROTATING) {
             if (state->has_state(STATE_CYCLE_STOP)) {
                 state->set_pick_place_state(0);
@@ -177,7 +226,7 @@ void Control::execute_realtime() {
         }
     }
 
-    if (state->has_state(STATE_CYCLE_PICK | STATE_CYCLE_PLACE | STATE_CYCLE_ROTATE | STATE_CYCLE_STOP)) {
+    if (state->has_state(STATE_CYCLE_PICK | STATE_CYCLE_PLACE | STATE_CYCLE_ROTATE | STATE_CYCLE_MOVE | STATE_CYCLE_STOP)) {
         steppers->prepare_buffer();     // Prepare and fill stepper buffer
     }
 }

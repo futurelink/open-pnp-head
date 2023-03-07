@@ -29,8 +29,8 @@ public:
     explicit Motion(Settings *settings, State *state);
 
     bool check_nozzle_in_position(uint8_t nozzle);
-    void move(uint8_t nozzle, float depth);
-    void rotate(uint8_t nozzle, float angle);
+    void move(uint8_t nozzle, float depth, float speed);
+    void rotate(uint8_t nozzle, float angle, float speed);
 
     motion_block_t *get_current_block();
     void discard_current_block();

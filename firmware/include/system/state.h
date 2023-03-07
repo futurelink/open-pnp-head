@@ -14,7 +14,8 @@
 #define STATE_CYCLE_PICK            (1 << 2) // Cycle is running to pick up a component
 #define STATE_CYCLE_PLACE           (1 << 3) // Cycle is running to place a component
 #define STATE_CYCLE_ROTATE          (1 << 4) // Cycle is running to rotate a component
-#define STATE_CYCLE_STOP            (1 << 5)
+#define STATE_CYCLE_MOVE            (1 << 5) // Cycle is running to move a nozzle to specific position
+#define STATE_CYCLE_STOP            (1 << 6)
 
 // Pick-place cycle states
 // -----------------------
@@ -23,7 +24,8 @@
 #define STATE_PNP_CYCLE_WAIT_VACUUM     (1 << 1)
 #define STATE_PNP_CYCLE_MOVE_UP         (1 << 2)
 #define STATE_PNP_CYCLE_ROTATING        (1 << 3)
-#define STATE_PNP_CYCLE_ALARM           (1 << 4)
+#define STATE_PNP_CYCLE_MOVE            (1 << 4)
+#define STATE_PNP_CYCLE_ALARM           (1 << 5)
 
 class State {
 private:

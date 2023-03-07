@@ -60,7 +60,7 @@ void Steppers::pulse_start() {
             st.dir_out_bits = st.exec_block->dir_port_bits ^ dir_port_invert_mask;
 
             // With AMASS enabled, adjust Bresenham axis increment counters according to AMASS level
-            for (uint8_t idx = 0; idx < AXIS_N; idx++) {
+            for (uint8_t idx = 0; idx < (uint8_t) AXIS_N; idx++) {
                 st.steps[idx] = st.exec_block->steps[idx] >> st.exec_segment->amass_level;
             }
         } else {
@@ -74,7 +74,7 @@ void Steppers::pulse_start() {
 
     // Execute step displacement profile by Bresenham line algorithm
     // -------------------------------------------------------------
-    for (uint8_t idx = 0; idx < AXIS_N; idx++) {
+    for (uint8_t idx = 0; idx < (uint8_t) AXIS_N; idx++) {
         st.counters[idx] += st.steps[idx];
         if (st.counters[idx] > st.exec_block->step_event_count) {
             st.step_out_bits |= step_pin_mask[idx];
@@ -181,7 +181,7 @@ bool Steppers::prepare_block() {
     // Prepare block execution data
     st_prep_block->dir_port_bits = axis_to_port_direction_bits(planned_block->direction_bits);
     st_prep_block->step_event_count = planned_block->step_event_count << MAX_AMASS_LEVEL;
-    for (uint8_t idx = 0; idx < AXIS_N; idx++)
+    for (uint8_t idx = 0; idx < (uint8_t) AXIS_N; idx++)
         st_prep_block->steps[idx] = planned_block->steps[idx] << MAX_AMASS_LEVEL;
 
     // Initialize segment buffer data for generating the segments.
@@ -376,7 +376,7 @@ void Steppers::apply_amass(segment_t *segment, uint32_t cycles) {
 
 uint16_t Steppers::axis_to_port_direction_bits(uint16_t axis_bits) const {
     uint16_t bits = 0;
-    for (uint8_t idx = 0; idx < AXIS_N; idx++) if (axis_bits & (1 << idx)) bits |= direction_pin_mask[idx];
+    for (uint8_t idx = 0; idx < (uint8_t) AXIS_N; idx++) if (axis_bits & (1 << idx)) bits |= direction_pin_mask[idx];
     return bits;
 }
 

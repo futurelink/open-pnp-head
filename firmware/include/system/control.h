@@ -15,9 +15,11 @@
 
 #include <cstdint>
 
-#define COMMAND_PICK    0
-#define COMMAND_PLACE   1
-#define COMMAND_ROTATE  2
+#define COMMAND_NONE    0
+#define COMMAND_PICK    1
+#define COMMAND_PLACE   2
+#define COMMAND_ROTATE  3
+#define COMMAND_MOVE    4
 
 #define STATUS_OK                       0
 #define STATUS_EXPECTED_COMMAND_LETTER  1

@@ -42,6 +42,8 @@ void System::run() {
     serial->init();
     control->init();
 
+    settings->load();
+
     serial->print_string(GREETING_STRING);
 
     main_loop(); // Run main loop until reset signal is caught
@@ -134,6 +136,11 @@ uint8_t System::execute_command(parser_state_t *parser_state) {
         case COMMAND_ROTATE:
             control->get_state()->set_pick_place_state(0);
             control->get_state()->set_state(STATE_CYCLE_ROTATE);
+            break;
+
+        case COMMAND_MOVE:
+            control->get_state()->set_pick_place_state(0);
+            control->get_state()->set_state(STATE_CYCLE_MOVE);
             break;
 
         default: break;

@@ -21,7 +21,7 @@ void Vacuum::set_value(uint8_t nozzle, uint16_t val) {
 
 float Vacuum::get_value(uint8_t nozzle) {
     return (float)sensor_min_pressure[nozzle] +
-        (values[nozzle] * -(float)sensor_min_pressure[nozzle] / 4096); // 12-bit ADC
+        ((float)values[nozzle] * -(float)sensor_min_pressure[nozzle] / 4096); // 12-bit ADC
 }
 
 void Vacuum::refresh() {

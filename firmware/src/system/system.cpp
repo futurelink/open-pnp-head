@@ -37,6 +37,7 @@ void System::run() {
     stm32_init();
     stm32_eeprom_init();
     stm32_system_init();
+    stm32_light_init();
 
     state->init();
     serial->init();
@@ -120,8 +121,6 @@ uint8_t System::execute_command(parser_state_t *parser_state) {
     if (!control->get_state()->is_state(STATE_IDLE))
         return STATUS_BUSY;
 
-    control->execute_relay(parser_state->relay);
-
     switch (parser_state->line_state.command) {
         case COMMAND_PICK:
             control->get_state()->set_pick_place_state(0);
@@ -141,6 +140,14 @@ uint8_t System::execute_command(parser_state_t *parser_state) {
         case COMMAND_MOVE:
             control->get_state()->set_pick_place_state(0);
             control->get_state()->set_state(STATE_CYCLE_MOVE);
+            break;
+
+        case COMMAND_LIGHT:
+            stm32_light_set_color(parser_state->light_color);
+            break;
+
+        case COMMAND_RELAY:
+            control->execute_relay(parser_state->relay);
             break;
 
         default: break;

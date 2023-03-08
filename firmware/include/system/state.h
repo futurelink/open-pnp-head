@@ -76,7 +76,7 @@ inline void State::set_state(uint8_t st) { this->state = st; }
 inline uint8_t State::get_pick_place_state() const { return pick_place_state; }
 inline void State::set_pick_place_state(uint8_t st) { pick_place_state = st; }
 
-inline int32_t *State::get_positions() const { return positions; }
+inline int32_t *State::get_positions() const { return (int32_t *) positions; }
 inline void State::increment_position(uint8_t axis) { positions[axis]++; }
 inline void State::decrement_position(uint8_t axis) { positions[axis]--; }
 

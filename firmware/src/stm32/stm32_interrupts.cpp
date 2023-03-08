@@ -24,8 +24,6 @@
 #include "stm32f1xx_hal.h"
 #include "stm32/stm32_interrupts.h"
 
-extern PCD_HandleTypeDef hpcd_USB_FS;
-
 [[noreturn]] void NMI_Handler(void) {
     while (true) {}
 }
@@ -63,7 +61,7 @@ void EXTI15_10_IRQHandler(void) {
     System::external_interrupt_limit();
 }
 
-void TIM3_IRQHandler() {
+void TIM2_IRQHandler() {
     System::steppers_pulse_start();
 }
 
@@ -85,3 +83,31 @@ void ADC1_2_IRQHandler() {
         ADC1->SR &= ~ADC_SR_EOC;
     }
 }
+
+#ifdef WS8212LED
+extern uint8_t WS8212LED_Sequence;
+extern uint8_t WS8212LED_Buffer[];
+
+void DMA1_Channel2_IRQHandler() {
+    if (DMA1->ISR & DMA_ISR_TCIF2) {
+        DMA1->IFCR = DMA_ISR_TCIF2;
+        if (WS8212LED_Sequence == (WS8212LED_N - 1)) { // 16 LEDs, 15th is the last
+            // Stop transmission
+            // -----------------
+            // 1) Disable timer immediately to stop transmission
+            __HAL_RCC_TIM3_CLK_DISABLE();
+
+            // 2) Turn off timer
+            TIM3->CCER &= ~(TIM_CCx_ENABLE << TIM_CHANNEL_3);
+            TIM3->DIER &= ~TIM_DMA_CC3;
+            TIM3->CR1 &= ~TIM_CR1_CEN;
+
+            // 3) Turn off DMA
+            DMA1_Channel2->CCR &= ~DMA_CCR_EN;
+            DMA1_Channel2->CCR &= ~(DMA_IT_TC | DMA_IT_TE | DMA_IT_HT);
+
+            WS8212LED_Sequence = 0;
+        } else WS8212LED_Sequence++;
+    }
+}
+#endif

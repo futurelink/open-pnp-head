@@ -34,6 +34,7 @@ uint8_t Control::parse_line(char *line) {
     line_state->command = COMMAND_NONE;
     line_state->word_bits = 0;
     line_state->letter = 0;
+    line_state->light_color = 0;
 
     // Parse the line
     while (line[char_counter] != 0) {
@@ -51,13 +52,18 @@ uint8_t Control::parse_line(char *line) {
         // Place command the same with 'L' i.e. L0 Z-8, L1 Z-10, etc
         // Rotate command R[nozzle] A[degree] i.e. R1 A90
         // Valve relay command V[0-4]
-        switch(parser_state.line_state.letter) {
-            case 'R': line_state->command = COMMAND_ROTATE; parser_state.nozzle = line_state->int_value; break;
-            case 'P': line_state->command = COMMAND_PICK; parser_state.nozzle = line_state->int_value; break;
-            case 'L': line_state->command = COMMAND_PLACE; parser_state.nozzle = line_state->int_value; break;
-            case 'M': line_state->command = COMMAND_MOVE; parser_state.nozzle = line_state->int_value; break;
-            case 'V': result = process_relay(); break;
-            default: result = process_parameter();
+        if (line_state->command) {
+            result = process_parameter();
+        } else {
+            switch(parser_state.line_state.letter) {
+                case 'R': line_state->command = COMMAND_ROTATE; parser_state.nozzle = line_state->int_value; break;
+                case 'T': line_state->command = COMMAND_PICK; parser_state.nozzle = line_state->int_value; break;
+                case 'P': line_state->command = COMMAND_PLACE; parser_state.nozzle = line_state->int_value; break;
+                case 'M': line_state->command = COMMAND_MOVE; parser_state.nozzle = line_state->int_value; break;
+                case 'L': line_state->command = COMMAND_LIGHT; break;
+                case 'V': line_state->command = COMMAND_RELAY; result = process_relay(); break;
+                default: result = STATUS_CODE_UNSUPPORTED_COMMAND;
+            }
         }
     }
 
@@ -78,8 +84,8 @@ uint8_t Control::parse_line(char *line) {
  */
 uint8_t Control::process_parameter() {
     auto line_state = &parser_state.line_state;
-    uint8_t word_bit = 0;
-    switch(line_state->letter){
+    uint8_t word_bit;
+    switch(line_state->letter) {
         case 'Z':
             if (line_state->value > settings->get_linear_max_travel())
                 return STATUS_CODE_MAX_VALUE_EXCEEDED;
@@ -88,6 +94,9 @@ uint8_t Control::process_parameter() {
             break;
         case 'A': word_bit = WORD_A; parser_state.angle = line_state->value; break;
         case 'F': word_bit = WORD_F; parser_state.feed = line_state->value; break;
+        case 'R': word_bit = WORD_R; line_state->light_color |= (((uint8_t) line_state->value & 0xff) << 8); break;
+        case 'G': word_bit = WORD_G; line_state->light_color |= (((uint8_t) line_state->value & 0xff) << 16); break;
+        case 'B': word_bit = WORD_B; line_state->light_color |= ((uint8_t) line_state->value & 0xff); break;
         default: return STATUS_CODE_UNSUPPORTED_COMMAND;
     }
 
@@ -95,12 +104,19 @@ uint8_t Control::process_parameter() {
     if ((line_state->word_bits & (1 << word_bit)) != 0) return STATUS_CODE_WORD_REPEATED; // [Word repeated]
     line_state->word_bits |= (1 << word_bit);
 
-    // Require feed rate on move commands
-    if ((line_state->command != COMMAND_NONE) && ((line_state->word_bits & (1 << WORD_F)) == 0))
-        return STATUS_CODE_UNDEFINED_FEED_RATE;
+    // If we got light command with RGB arguments, then change the color
+    if (line_state->command == COMMAND_LIGHT) {
+        if (line_state->word_bits & ((1 << WORD_R) | (1 << WORD_G) | (1 << WORD_B))) {
+            if (line_state->value > 255) return STATUS_CODE_MAX_VALUE_EXCEEDED;
+            else parser_state.light_color = line_state->light_color;
+        }
+    }
 
-    // Check for parameters that are required by command
-    if (line_state->command != COMMAND_NONE) {
+    if ((line_state->command != COMMAND_NONE) && (line_state->command != COMMAND_LIGHT)) {
+        // Require feed rate on move commands
+        if ((line_state->word_bits & (1 << WORD_F)) == 0) return STATUS_CODE_UNDEFINED_FEED_RATE;
+
+        // Check for parameters that are required by command
         if (line_state->command == COMMAND_ROTATE) {
             // Require angle on rotation command
             if ((line_state->word_bits & (1 << WORD_A)) == 0) return STATUS_CODE_INVALID_TARGET;
@@ -117,11 +133,11 @@ uint8_t Control::process_relay() {
     auto line_state = &parser_state.line_state;
     if (line_state->mantissa > 0) return STATUS_CODE_COMMAND_VALUE_NOT_INTEGER; // [No Mxx.x commands]
     switch(line_state->int_value) {
-        case 0: case 1: case 2: case 3: case 4: // Relay ON commands
+        case 0: case 1: case 2: case 3: // Relay ON commands
             parser_state.relay |= (1 << (line_state->int_value));
             break;
 
-        case 10: case 11: case 12: case 13: case 14: // Relay OFF commands
+        case 10: case 11: case 12: case 13: // Relay OFF commands
             parser_state.relay &= ~(1 << (line_state->int_value - 10));
             break;
 

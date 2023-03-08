@@ -28,15 +28,16 @@
 [[noreturn]] void MemManage_Handler(void);
 [[noreturn]] void BusFault_Handler(void);
 [[noreturn]] void UsageFault_Handler(void);
-void SVC_Handler(void);
-void DebugMon_Handler(void);
-void PendSV_Handler(void);
-void SysTick_Handler(void);
-void EXTI15_10_IRQHandler(void);
-void TIM3_IRQHandler(void);
-void TIM4_IRQHandler(void);
+void SVC_Handler();
+void DebugMon_Handler();
+void PendSV_Handler();
+void SysTick_Handler();
+void EXTI15_10_IRQHandler();
+void TIM2_IRQHandler();
+void TIM4_IRQHandler();
 void USART1_IRQHandler();
 void ADC1_2_IRQHandler();
+void DMA1_Channel2_IRQHandler();
 
 #ifdef __cplusplus
 }

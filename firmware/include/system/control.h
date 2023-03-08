@@ -20,6 +20,8 @@
 #define COMMAND_PLACE   2
 #define COMMAND_ROTATE  3
 #define COMMAND_MOVE    4
+#define COMMAND_LIGHT   5
+#define COMMAND_RELAY   6
 
 #define STATUS_OK                       0
 #define STATUS_EXPECTED_COMMAND_LETTER  1

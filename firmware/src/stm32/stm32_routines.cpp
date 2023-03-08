@@ -19,18 +19,19 @@
 */
 
 #include "system/settings.h"
-
 #include "stm32/stm32_routines.h"
 
 #define EEPROM_START_ADDRESS    ((uint32_t) 0x0801FC00) // Last 1K page (127K offset)
 #define EEPROM_PAGE_SIZE        0x400
 
-int __errno; // To avoid undefined __errno when linking
+#ifdef WS8212LED
+volatile uint8_t WS8212LED_Buffer[24];
+volatile uint8_t WS8212LED_Sequence;
+#endif
 
 volatile uint8_t EE_Buffer[EEPROM_PAGE_SIZE];
 
 static void SystemClock_Config();
-static void GPIO_Init();
 
 void stm32_init() {
     __HAL_RCC_AFIO_CLK_ENABLE();
@@ -40,7 +41,9 @@ void stm32_init() {
     HAL_Init();
     SystemClock_Config();
 
-    GPIO_Init();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
 }
 
 /**
@@ -65,17 +68,6 @@ void SystemClock_Config() {
             .APB2CLKDivider = RCC_HCLK_DIV1
     };
     HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2);
-}
-
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void GPIO_Init() {
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    __HAL_RCC_GPIOC_CLK_ENABLE();
 }
 
 void stm32_config_timer(TIM_TypeDef* timer, uint16_t period, uint16_t prescaler, uint8_t PP) {
@@ -120,6 +112,99 @@ void stm32_system_init() {
 
 }
 
+#ifdef WS8212LED
+void stm32_light_run_pwm() {
+    WS8212LED_Sequence = 0;
+
+    TIM3->CR1 &= ~TIM_CR1_CEN;          // Disable timer
+    DMA1_Channel2->CCR &= ~DMA_CCR_EN;  // Disable DMA channel
+    DMA1->IFCR = DMA_ISR_GIF2;          // Clear all flags in DMA Channel 2
+
+    // Configure DMA Channel data length
+    DMA1_Channel2->CNDTR = 24;
+    DMA1_Channel2->CPAR = (uint32_t) &TIM3->CCR3;
+    DMA1_Channel2->CMAR = (uint32_t) WS8212LED_Buffer;
+
+    DMA1_Channel2->CCR |= DMA_IT_TC;    // Enable DMA transmission complete interrupt
+    DMA1_Channel2->CCR |= DMA_CCR_EN;   // Enable DMA channel
+
+    __HAL_RCC_TIM3_CLK_ENABLE();        // Enable timer clock
+
+    TIM3->CCR3 = 0;                     // Reset CCR3, so that no data be sent
+    TIM3->DIER |= TIM_DIER_UDE;         // Enable DMA update request
+    TIM3->DIER |= TIM_DMA_CC3;          // Enable the TIM Output Capture/Compare 3 request
+    TIM3->CCER |= (TIM_CCx_ENABLE << TIM_CHANNEL_3);  // Enable the Capture compare channel
+    TIM3->CR1 |= TIM_CR1_CEN;           // Enable timer
+}
+
+void stm32_light_set_color(const uint32_t color) {
+    WS8212LED_Sequence = 0;
+
+    uint8_t index = 0;
+    for (int8_t bit = 23; bit >= 0; bit--) {
+        if (color & (1 << bit)) WS8212LED_Buffer[index] = 70;     // PWM fill for '1'
+        else WS8212LED_Buffer[index] = 15;                        // PWM fill for '0'
+        index++;
+    }
+
+    stm32_light_run_pwm(); // Run PWM generation
+}
+#endif
+
+void stm32_light_init() {
+#ifdef WS8212LED
+    // Set up PWM generation for WS2812b LEDs
+    // --------------------------------------
+
+    // Set up PWM pin as output with alternative function (TIM2 channel 1 output)
+    GPIO_InitTypeDef GPIO_InitStruct = {
+            .Pin = (1 << LIGHT_BIT),
+            .Mode = GPIO_MODE_AF_PP,
+            .Speed = GPIO_SPEED_FREQ_LOW
+    };
+    HAL_GPIO_Init(LIGHT_PORT, &GPIO_InitStruct);
+
+    // Set up DMA for WS2812 LED PWM
+    // -----------------------------
+    __HAL_RCC_DMA1_CLK_ENABLE();
+    DMA1_Channel2->CCR =
+            DMA_CCR_PSIZE_0 |   // Peripheral size - Timer's CCR3 has 16 bit (half word)
+            DMA_CCR_MINC |      // Memory increment
+            DMA_CCR_DIR |       // Memory to peripheral
+            DMA_CCR_CIRC |      // Circular buffer
+            DMA_CCR_PL_1;       // High priority
+    DMA1_Channel2->CNDTR = 0;
+
+    __HAL_RCC_TIM3_CLK_ENABLE();
+
+    TIM3->PSC = 0;                                                          // No pre-scaler
+    TIM3->ARR = (F_CPU / 800000 - 1);                                       // Duty cycle 800KHz
+    TIM3->CCMR1 = 0;
+    TIM3->CCMR2 = TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;    // Output mode
+    TIM3->CCER = TIM_CCER_CC3E;                                             // Output enable
+    TIM3->EGR = TIM_EGR_UG;                                                 // Update generation
+    TIM3->DIER &= ~TIM_DIER_UDE;                                            // Disable DMA requests
+    TIM3->CR1 &= ~TIM_CR1_CEN;                                              // Disable timer
+
+    __HAL_RCC_TIM3_CLK_DISABLE();
+
+    HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 5, 0);
+    NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+
+    stm32_light_set_color(0x000000);
+
+#else
+
+    GPIO_InitTypeDef GPIO_Init = {
+            .Pin = (1 << LIGHT_BIT),
+            .Mode = GPIO_MODE_OUTPUT_PP,
+            .Speed = GPIO_SPEED_HIGH
+    };
+    HAL_GPIO_Init(LIGHT_PORT, &GPIO_Init);
+
+#endif
+}
+
 void stm32_relay_init() {
     GPIO_InitTypeDef GPIO_Init = {
             .Pin = ((1 << RELAY_0_BIT) | (1 << RELAY_1_BIT) | (1 << RELAY_2_BIT) | (1 << RELAY_3_BIT)),
@@ -127,9 +212,6 @@ void stm32_relay_init() {
             .Speed = GPIO_SPEED_MEDIUM
     };
     HAL_GPIO_Init(RELAY_PORT, &GPIO_Init);
-
-    GPIO_Init.Pin = (1 << LIGHT_BIT);
-    HAL_GPIO_Init(LIGHT_PORT, &GPIO_Init);
 }
 
 void stm32_stepper_init() {
@@ -146,9 +228,9 @@ void stm32_stepper_init() {
     gpio.Pin = DIRECTION_MASK;
     HAL_GPIO_Init(DIRECTION_PORT, &gpio);
 
-    __HAL_RCC_TIM3_CLK_ENABLE();
-    stm32_config_timer(TIM3, 1, 1, 0);
-    NVIC_DisableIRQ(TIM3_IRQn);
+    __HAL_RCC_TIM2_CLK_ENABLE();
+    stm32_config_timer(TIM2, 1, 1, 0);
+    NVIC_DisableIRQ(TIM2_IRQn);
 
     __HAL_RCC_TIM4_CLK_ENABLE();
     stm32_config_timer(TIM4, 1, 1, 0);
@@ -270,9 +352,6 @@ void stm32_set_relay_state(uint8_t state) {
             ((state & 0x04) ? (1 << RELAY_2_BIT) : ((1 << RELAY_2_BIT) << 16u)) |
             ((state & 0x08) ? (1 << RELAY_3_BIT) : ((1 << RELAY_3_BIT) << 16u));
     RELAY_PORT->BSRR = value;
-
-    value = (state & 0x10) ? (1 << LIGHT_BIT) : (1 << 16u << LIGHT_BIT);
-    LIGHT_PORT->BSRR = value;
 }
 
 void stm32_steppers_enable(bool invert) {
@@ -306,9 +385,9 @@ void stm32_steppers_pulse_end(PORTPINDEF step_mask) {
 }
 
 bool stm32_steppers_pulse_start(bool busy, PORTPINDEF dir_bits, PORTPINDEF step_bits) {
-    if ((TIM3->SR & TIM_SR_UIF) != 0) {      // check interrupt source
-        TIM3->SR &= ~TIM_SR_UIF;             // clear UIF flag
-        TIM3->CNT = 0;
+    if ((TIM2->SR & TIM_SR_UIF) != 0) {      // check interrupt source
+        TIM2->SR &= ~TIM_SR_UIF;             // clear UIF flag
+        TIM2->CNT = 0;
     } else return false;
 
     if (busy) return false; // The busy-flag is used to avoid reentering this interrupt
@@ -339,7 +418,7 @@ void stm32_steppers_set(PORTPINDEF dir_bits, PORTPINDEF step_bits) {
 }
 
 void stm32_steppers_set_timer(uint16_t value) {
-    TIM3->ARR = value - 1; // Set the Auto-reload value
+    TIM2->ARR = value - 1; // Set the Auto-reload value
 }
 
 /**
@@ -352,17 +431,17 @@ void stm32_steppers_wake_up(uint8_t step_pulse_time, uint16_t cycles_per_tick, u
     TIM4->EGR = 1; // Immediate reload
     TIM4->SR &= ~TIM_SR_UIF;
 
-    TIM3->ARR = cycles_per_tick - 1;
-    TIM3->EGR = 1; // Immediate reload
+    TIM2->ARR = cycles_per_tick - 1;
+    TIM2->EGR = 1; // Immediate reload
 
-    NVIC_EnableIRQ(TIM3_IRQn);
+    NVIC_EnableIRQ(TIM2_IRQn);
 }
 
 /**
  * Disable Stepper Driver Interrupt.
  * Allows Stepper Port Reset Interrupt to finish, if active.
  */
-void stm32_steppers_go_idle() { NVIC_DisableIRQ(TIM3_IRQn); }
+void stm32_steppers_go_idle() { NVIC_DisableIRQ(TIM2_IRQn); }
 
 void stm32_rs485_init() {
     __HAL_RCC_USART1_CLK_ENABLE();

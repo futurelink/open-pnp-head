@@ -36,6 +36,8 @@ void stm32_config_timer(TIM_TypeDef *TIMER, uint16_t Period, uint16_t Prescaler,
 
 void stm32_init();
 void stm32_system_init();
+void stm32_light_init();
+void stm32_light_set_color(uint32_t color);
 
 void stm32_limits_init();
 void stm32_limits_enable();

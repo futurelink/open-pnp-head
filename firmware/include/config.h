@@ -44,7 +44,7 @@
 
 // Time in ms to wait while pressure normalizes:
 #define PICK_WAIT_TIME                  50  // when picking
-#define PLACE_WAIT_TIME                 50  // when placing
+#define PLACE_WAIT_TIME                 70  // when placing
 
 #ifdef ROCKER_HEAD
 #define STEP_PER_ROTATION               6400
@@ -53,5 +53,8 @@
 #define ARM_CENTER_OFFSET               7       // mm
 #define ARM_ROLLER_RADIUS               5       // mm
 #endif
+
+#define WS8212LED                               // Turns on addressable LEDs
+#define WS8212LED_N                     16      // LEDs number
 
 #endif // CONFIG_H

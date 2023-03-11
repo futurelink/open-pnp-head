@@ -63,7 +63,7 @@
 #define VAC_SENSOR_3_LOCKED_PRESSURE    (-5) // kPa
 #define VAC_SENSOR_4_LOCKED_PRESSURE    (-5) // kPa
 
-#define STEPPER_ENABLE_INVERT           true
+#define STEPPER_ENABLE_INVERT
 #define ACCELERATION_TICKS_PER_SECOND   50
 #define STEP_PULSE_MS                   2
 

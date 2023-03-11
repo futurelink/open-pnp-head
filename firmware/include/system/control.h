@@ -68,6 +68,7 @@ private:
 
     static bool read_float(const char *line, uint8_t *char_counter, float *float_ptr);
     uint8_t     process_relay();
+    void        check_and_disable_steppers();
 
 public:
     explicit    Control(Settings *settings, Report *report, Motion *motion, State *state, Callbacks *callbacks);

@@ -126,7 +126,7 @@ void Steppers::pulse_end() const {
  * Stepper state initialization
  */
 void Steppers::wake_up() {
-    stm32_steppers_enable(STEPPER_ENABLE_INVERT);
+    stm32_steppers_enable();
 
     // Initialize stepper output bits to ensure first ISR call does not step.
     st.step_out_bits = step_port_invert_mask;
@@ -144,11 +144,6 @@ void Steppers::go_idle() {
     stm32_steppers_go_idle();
 
     busy = false;
-
-    // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
-    bool pin_state = false; // Keep enabled.
-    if (pin_state) stm32_steppers_disable(STEPPER_ENABLE_INVERT);
-    else stm32_steppers_enable(STEPPER_ENABLE_INVERT);
 }
 
 /**

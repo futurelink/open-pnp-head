@@ -170,6 +170,15 @@ uint8_t Control::process_relay() {
     return STATUS_OK;
 }
 
+/**
+ * Disables steppers (turns off enable signal). This can be done only when
+ * all linear axes are in upper position so that for rocker head springs are not
+ * tensioned.
+ */
+void Control::check_and_disable_steppers() {
+    if (end_stops->all_at_zero()) stm32_steppers_disable();
+}
+
 void Control::execute_realtime() {
     // -----------------------------------------------------------------------------------------------------------------
     // Pick-Place cycle state machine
@@ -189,6 +198,7 @@ void Control::execute_realtime() {
     if (state->get_pick_place_state() & STATE_PNP_CYCLE_ALARM) {
         state->set_pick_place_state(STATE_PNP_CYCLE_NONE);
         state->set_state(STATE_ALARM);
+        check_and_disable_steppers();
     }
 
     // Pick or place state
@@ -237,6 +247,7 @@ void Control::execute_realtime() {
             if (end_stops->all_at_zero()) {
                 state->set_pick_place_state(STATE_PNP_CYCLE_NONE);
                 state->set_state(STATE_IDLE);
+                check_and_disable_steppers();
             } else {
                 state->set_pick_place_state(STATE_PNP_CYCLE_ALARM);
             }
@@ -257,6 +268,7 @@ void Control::execute_realtime() {
             } else {
                 state->set_pick_place_state(STATE_PNP_CYCLE_NONE);
                 state->set_state(STATE_IDLE);
+                check_and_disable_steppers();
             }
         }
     }
@@ -271,6 +283,7 @@ void Control::execute_realtime() {
             if (state->has_state(STATE_CYCLE_STOP)) {
                 state->set_pick_place_state(STATE_PNP_CYCLE_NONE);
                 state->set_state(STATE_IDLE);
+                check_and_disable_steppers();
             }
         }
     }

@@ -118,5 +118,5 @@ void System::usart_transmit() { serial->transmit(); }
 void System::usart_receive() { serial->receive(); }
 
 uint8_t System::execute_command(parser_state_t *parser_state) {
-    control->execute_command();
+    return control->execute_command();
 }

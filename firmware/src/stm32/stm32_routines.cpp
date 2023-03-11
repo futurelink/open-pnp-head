@@ -355,19 +355,36 @@ void stm32_set_relay_state(uint8_t state) {
     RELAY_PORT->BSRR = value;
 }
 
-void stm32_steppers_enable(bool invert) {
-    // Set micro-steps on rotary axes (1/64)
-    stm32_steppers_disable(invert);                 // Put STSPIN220 back in stand-by mode
-    STEP_PORT->ODR |= ROTARY_STEP_MASK;             // Set MODE4
-    DIRECTION_PORT->ODR |= ROTARY_DIRECTION_MASK;   // Set MODE3
-
-    if (invert) STEPPERS_DISABLE_PORT->BSRR = STEPPERS_DISABLE_MASK;
-    else STEPPERS_DISABLE_PORT->BSRR = (STEPPERS_DISABLE_MASK) << 16U;
+bool stm32_steppers_disabled() {
+#ifdef STEPPER_ENABLE_INVERT
+        return ((STEPPERS_DISABLE_PORT->ODR & STEPPERS_DISABLE_MASK) == 0);
+#else
+        return ((STEPPERS_DISABLE_PORT->ODR & STEPPERS_DISABLE_MASK) != 0);
+#endif
 }
 
-void stm32_steppers_disable(bool invert) {
-    if (invert) STEPPERS_DISABLE_PORT->BSRR = (STEPPERS_DISABLE_MASK) << 16U;
-    else STEPPERS_DISABLE_PORT->BSRR = STEPPERS_DISABLE_MASK;
+void stm32_steppers_enable() {
+    if (stm32_steppers_disabled()) {                    // Must not go enable whilst enabled(!)
+                                                        // Set micro-steps on rotary axes (1/16)
+        STEP_PORT->ODR |= ROTARY_STEP_MASK;             // Set MODE4
+        DIRECTION_PORT->ODR |= ROTARY_DIRECTION_MASK;   // Set MODE3
+
+#ifdef STEPPER_ENABLE_INVERT
+        STEPPERS_DISABLE_PORT->BSRR = STEPPERS_DISABLE_MASK;
+#else
+        STEPPERS_DISABLE_PORT->BSRR = (STEPPERS_DISABLE_MASK) << 16U;
+#endif
+
+        HAL_Delay(1);                              // Wait 1ms while driver goes active
+    }
+}
+
+void stm32_steppers_disable() {
+#ifdef STEPPER_ENABLE_INVERT
+    STEPPERS_DISABLE_PORT->BSRR = (STEPPERS_DISABLE_MASK) << 16U;
+#else
+    STEPPERS_DISABLE_PORT->BSRR = STEPPERS_DISABLE_MASK;
+#endif
 }
 
 void stm32_steppers_pulse_end(uint16_t step_mask) {
@@ -380,8 +397,8 @@ void stm32_steppers_pulse_end(uint16_t step_mask) {
 }
 
 bool stm32_steppers_pulse_start(bool busy, uint16_t dir_bits, uint16_t step_bits) {
-    if ((TIM2->SR & TIM_SR_UIF) != 0) {      // check interrupt source
-        TIM2->SR &= ~TIM_SR_UIF;             // clear UIF flag
+    if ((TIM2->SR & TIM_SR_UIF) != 0) {      // Check interrupt source
+        TIM2->SR &= ~TIM_SR_UIF;             // Clear UIF flag
         TIM2->CNT = 0;
     } else return false;
 

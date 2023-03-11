@@ -1,17 +1,40 @@
+/*
+  config.h - main configuration
+  Part of open-pnp-head
+
+  Copyright (c) 2022 Denis Pavlov
+
+  open-pnp-head is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  open-pnp-head is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with open-pnp-head.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <cstdint>
 
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#define BAUDRATE            115200
+#define BAUD_RATE           115200
 
 #define GREETING_STRING     "PNP Head / v0.1\n"
 #define LINE_MAX_LENGTH     80
 
+// Turns on rocker head mode.
+// Comment out to switch to linear movement mode
+// ---------------------------------------------
 #define ROCKER_HEAD
 
-#define ROTARY_AXIS_N       4
-#define LINEAR_AXIS_N       (ROTARY_AXIS_N / 2)
+#define ROTARY_AXIS_N       4                       // Number of rotary axes i.e. nozzles
+#define LINEAR_AXIS_N       (ROTARY_AXIS_N / 2)     // Number of linear/rocker axes
 #define AXIS_N              (ROTARY_AXIS_N + LINEAR_AXIS_N)
 
 // Axis speed/acceleration settings
@@ -44,10 +67,13 @@
 #define ACCELERATION_TICKS_PER_SECOND   50
 #define STEP_PULSE_MS                   2
 
-// Time in ms to wait while pressure normalizes:
-#define PICK_WAIT_TIME                  50  // when picking
-#define PLACE_WAIT_TIME                 70  // when placing
+// Time in milliseconds to wait while pressure normalizes before measuring
+// -----------------------------------------------------------------------
+#define PICK_WAIT_TIME                  100  // when picking
+#define PLACE_WAIT_TIME                 150  // when placing
 
+// Rocker head settings
+// --------------------
 #ifdef ROCKER_HEAD
 #define STEP_PER_ROTATION               6400
 #define STEP_APPROX_SEGMENTS_N          20
@@ -56,7 +82,9 @@
 #define ARM_ROLLER_RADIUS               5       // mm
 #endif
 
-#define WS8212LED                               // Turns on addressable LEDs
+// Addressable LED light settings
+// ------------------------------
+#define WS8212LED                               // Turns on addressable LEDs support
 #define WS8212LED_N                     16      // LEDs number
 
 #endif // CONFIG_H

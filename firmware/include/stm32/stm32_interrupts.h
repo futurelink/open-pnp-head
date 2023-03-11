@@ -1,23 +1,25 @@
-/**
-  ******************************************************************************
-  * @file    stm32f1xx_it.h
-  * @brief   This file contains the headers of the interrupt handlers.
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under Ultimate Liberty license
-  * SLA0044, the "License"; You may not use this file except in compliance with
-  * the License. You may obtain a copy of the License at:
-  *                             www.st.com/SLA0044
-  *
- ******************************************************************************
-  */
+/*
+  config.h - main configuration
+  Part of open-pnp-head
 
-#ifndef stm32_interrupts_h
-#define stm32_interrupts_h
+  Copyright (c) 2022 Denis Pavlov
+
+  open-pnp-head is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  open-pnp-head is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with open-pnp-head.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#ifndef INTERRUPTS_H
+#define INTERRUPTS_H
 
 #ifdef __cplusplus
  extern "C" {

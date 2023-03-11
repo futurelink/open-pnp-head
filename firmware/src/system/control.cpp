@@ -1,5 +1,27 @@
+/*
+  control.cpp - main control routines
+  Part of open-pnp-head
+
+  Copyright (c) 2022 Denis Pavlov
+
+  open-pnp-head is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  open-pnp-head is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with open-pnp-head.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "system/control.h"
 #include "system/macros.h"
+
+#include "stm32/stm32_routines.h"
 
 #include <cmath>
 
@@ -258,6 +280,45 @@ void Control::execute_realtime() {
     }
 }
 
+uint8_t Control::execute_command() {
+    if (!get_state()->is_state(STATE_IDLE))
+        return STATUS_BUSY;
+
+    switch (parser_state.line_state.command) {
+        case COMMAND_PICK:
+            get_state()->set_pick_place_state(STATE_PNP_CYCLE_NONE);
+            get_state()->set_state(STATE_CYCLE_PICK);
+            break;
+
+        case COMMAND_PLACE:
+            get_state()->set_pick_place_state(STATE_PNP_CYCLE_NONE);
+            get_state()->set_state(STATE_CYCLE_PLACE);
+            break;
+
+        case COMMAND_ROTATE:
+            get_state()->set_pick_place_state(STATE_PNP_CYCLE_NONE);
+            get_state()->set_state(STATE_CYCLE_ROTATE);
+            break;
+
+        case COMMAND_MOVE:
+            get_state()->set_pick_place_state(STATE_PNP_CYCLE_NONE);
+            get_state()->set_state(STATE_CYCLE_MOVE);
+            break;
+
+        case COMMAND_LIGHT:
+            stm32_light_set_color(parser_state.light_color);
+            break;
+
+        case COMMAND_RELAY:
+            relay->set_state(parser_state.relay);
+            break;
+
+        default: break;
+    }
+
+    return STATUS_OK;
+}
+
 /**
  * Extracts a floating point value from a string. The following code is based loosely on
  * the avr-libc strtod() function by Michael Stumpf and Dmitry Xmelkov and many freely
@@ -342,7 +403,3 @@ void Control::steppers_start() {
 }
 
 void Control::report_state() { report->print_state(vacuum, end_stops->get_state()); }
-
-void Control::execute_relay(uint8_t st) {
-    relay->set_state(st);
-}

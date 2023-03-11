@@ -7152,7 +7152,7 @@
       (reference "#PWR0138") (unit 1) (value "+3.3V") (footprint "")
     )
     (path "/92493782-b039-48c6-8181-4f20920a88e0/0784c8e7-5728-4586-b1e8-47462d42c978"
-      (reference "#PWR?") (unit 1) (value "GND") (footprint "")
+      (reference "#PWR0139") (unit 1) (value "GND") (footprint "")
     )
     (path "/92493782-b039-48c6-8181-4f20920a88e0/6b9d3db7-eeaa-432e-86b6-c2d683baaf45"
       (reference "A1") (unit 1) (value "DRV8825") (footprint "Module:Pololu_Breakout-16_15.2x20.3mm")
@@ -7385,8 +7385,8 @@
     (path "/2a0a0914-dc08-408b-bd16-b11d35767669"
       (reference "Q5") (unit 1) (value "AO3400A") (footprint "Package_TO_SOT_SMD:SOT-23")
     )
-    (path "/92493782-b039-48c6-8181-4f20920a88e0/76d4d68d-1cc6-4380-93a3-08bf06c7b857"
-      (reference "Q?") (unit 1) (value "AO3400A") (footprint "Package_TO_SOT_SMD:SOT-23")
+    (path "/92493782-b039-48c6-8181-4f20920a88e0/797c253f-5f83-4f57-aa90-d552640fcc8c"
+      (reference "Q6") (unit 1) (value "AO3401A") (footprint "Package_TO_SOT_SMD:SOT-23")
     )
     (path "/30f4f394-b9dc-4e13-a469-325f78b86a5c"
       (reference "R1") (unit 1) (value "1K") (footprint "Resistor_SMD:R_0603_1608Metric")
@@ -7479,7 +7479,7 @@
       (reference "R30") (unit 1) (value "47K") (footprint "Resistor_SMD:R_0603_1608Metric")
     )
     (path "/92493782-b039-48c6-8181-4f20920a88e0/6a231e71-c071-46d3-8c59-3a0f2c8eceb5"
-      (reference "R31") (unit 1) (value "20K") (footprint "Resistor_SMD:R_0603_1608Metric")
+      (reference "R31") (unit 1) (value "10K") (footprint "Resistor_SMD:R_0603_1608Metric")
     )
     (path "/92493782-b039-48c6-8181-4f20920a88e0/60a147a0-e8b7-4b5a-8275-66a7f8e58ea4"
       (reference "R32") (unit 1) (value "47K") (footprint "Resistor_SMD:R_0603_1608Metric")
@@ -7604,11 +7604,11 @@
     (path "/92493782-b039-48c6-8181-4f20920a88e0/566645cb-6304-4955-b8ef-fa0255e9c060"
       (reference "R72") (unit 1) (value "20K") (footprint "Resistor_SMD:R_0603_1608Metric")
     )
-    (path "/92493782-b039-48c6-8181-4f20920a88e0/3e15d7e0-f02f-4d6c-b17b-0e4dc3635df7"
-      (reference "R?") (unit 1) (value "5K") (footprint "Resistor_SMD:R_0603_1608Metric")
+    (path "/92493782-b039-48c6-8181-4f20920a88e0/54cfa4e7-904a-4e6c-838d-d2bdd910c0ab"
+      (reference "R73") (unit 1) (value "100") (footprint "Resistor_SMD:R_0603_1608Metric")
     )
     (path "/92493782-b039-48c6-8181-4f20920a88e0/9186f09f-c04a-4499-a97d-a9b36baef4da"
-      (reference "R?") (unit 1) (value "100") (footprint "Resistor_SMD:R_0603_1608Metric")
+      (reference "R74") (unit 1) (value "47K") (footprint "Resistor_SMD:R_0603_1608Metric")
     )
     (path "/92493782-b039-48c6-8181-4f20920a88e0/7133a6f3-e0ec-424f-8733-ec6f74d56e45"
       (reference "RV1") (unit 1) (value "10K") (footprint "Potentiometer_SMD:Potentiometer_Bourns_TC33X_Vertical")

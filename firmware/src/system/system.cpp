@@ -1,5 +1,5 @@
 /*
-  system.cpp - Main system class, fully static
+  system.cpp - main system class, fully static
   Part of pnp-head
 
   Copyright (c) 2022-2023 Denis Pavlov
@@ -118,40 +118,5 @@ void System::usart_transmit() { serial->transmit(); }
 void System::usart_receive() { serial->receive(); }
 
 uint8_t System::execute_command(parser_state_t *parser_state) {
-    if (!control->get_state()->is_state(STATE_IDLE))
-        return STATUS_BUSY;
-
-    switch (parser_state->line_state.command) {
-        case COMMAND_PICK:
-            control->get_state()->set_pick_place_state(0);
-            control->get_state()->set_state(STATE_CYCLE_PICK);
-            break;
-
-        case COMMAND_PLACE:
-            control->get_state()->set_pick_place_state(0);
-            control->get_state()->set_state(STATE_CYCLE_PLACE);
-            break;
-
-        case COMMAND_ROTATE:
-            control->get_state()->set_pick_place_state(0);
-            control->get_state()->set_state(STATE_CYCLE_ROTATE);
-            break;
-
-        case COMMAND_MOVE:
-            control->get_state()->set_pick_place_state(0);
-            control->get_state()->set_state(STATE_CYCLE_MOVE);
-            break;
-
-        case COMMAND_LIGHT:
-            stm32_light_set_color(parser_state->light_color);
-            break;
-
-        case COMMAND_RELAY:
-            control->execute_relay(parser_state->relay);
-            break;
-
-        default: break;
-    }
-
-    return STATUS_OK;
+    control->execute_command();
 }

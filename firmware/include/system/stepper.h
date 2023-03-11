@@ -1,3 +1,23 @@
+/*
+  stepper.h
+  Part of open-pnp-head
+
+  Copyright (c) 2022 Denis Pavlov
+
+  open-pnp-head is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  open-pnp-head is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with open-pnp-head.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef STEPPER_H
 #define STEPPER_H
 
@@ -8,6 +28,9 @@
 
 #define SEGMENT_BUFFER_SIZE 32
 
+// AMASS was derived from GRBL's algorithm. If you want to learn more about
+// how it works, please refer to GRBL documentation / source code.
+// ------------------------------------------------------------------------
 #define MAX_AMASS_LEVEL 3
 // AMASS_LEVEL0: Normal operation. No AMASS. No upper cutoff frequency. Starts at LEVEL1 cutoff frequency.
 #define AMASS_LEVEL1 (F_CPU / 8000) // Over-drives ISR (x2). Defined as F_CPU/(Cutoff frequency in Hz)

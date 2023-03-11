@@ -78,6 +78,7 @@ public:
     uint8_t     parse_line(char *line);
     uint8_t     process_parameter();
 
+    uint8_t     execute_command();
     void        execute_realtime();
 
     void        report_state();
@@ -88,8 +89,6 @@ public:
     void        vacuum_set_value(uint8_t channel, uint16_t value);
     void        vacuum_refresh();
     void        vacuum_timer_decrement();
-
-    void        execute_relay(uint8_t relay);
 };
 
 inline State *Control::get_state() { return state; }

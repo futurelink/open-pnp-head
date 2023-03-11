@@ -833,7 +833,7 @@ uint32_t              HAL_UART_GetError(UART_HandleTypeDef *huart);
                                                  ((LENGTH) == UART_LINBREAKDETECTLENGTH_11B))
 #define IS_UART_WAKEUPMETHOD(WAKEUP) (((WAKEUP) == UART_WAKEUPMETHOD_IDLELINE) || \
                                       ((WAKEUP) == UART_WAKEUPMETHOD_ADDRESSMARK))
-#define IS_UART_BAUDRATE(BAUDRATE) ((BAUDRATE) <= 4500000U)
+#define IS_UART_BAUDRATE(BAUD_RATE) ((BAUD_RATE) <= 4500000U)
 #define IS_UART_ADDRESS(ADDRESS) ((ADDRESS) <= 0x0FU)
 
 #define UART_DIV_SAMPLING16(_PCLK_, _BAUD_)            (((_PCLK_)*25U)/(4U*(_BAUD_)))

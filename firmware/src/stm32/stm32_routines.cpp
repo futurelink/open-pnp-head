@@ -1,21 +1,21 @@
 /*
   stm32_routines.cpp - hardware specific routines
-  Part of Grbl
+  Part of open-pnp-head
 
   Copyright (c) 2022 Denis Pavlov
 
-  Grbl is free software: you can redistribute it and/or modify
+  open-pnp-head is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  open-pnp-head is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with open-pnp-head.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "system/settings.h"
@@ -41,6 +41,7 @@ void stm32_init() {
     HAL_Init();
     SystemClock_Config();
 
+    // Enable all GPIOs
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -360,22 +361,16 @@ void stm32_steppers_enable(bool invert) {
     STEP_PORT->ODR |= ROTARY_STEP_MASK;             // Set MODE4
     DIRECTION_PORT->ODR |= ROTARY_DIRECTION_MASK;   // Set MODE3
 
-    if (invert) {
-        HAL_GPIO_WritePin(STEPPERS_DISABLE_PORT, STEPPERS_DISABLE_MASK,GPIO_PIN_SET);
-    } else {
-        HAL_GPIO_WritePin(STEPPERS_DISABLE_PORT, STEPPERS_DISABLE_MASK,GPIO_PIN_RESET);
-    }
+    if (invert) STEPPERS_DISABLE_PORT->BSRR = STEPPERS_DISABLE_MASK;
+    else STEPPERS_DISABLE_PORT->BSRR = (STEPPERS_DISABLE_MASK) << 16U;
 }
 
 void stm32_steppers_disable(bool invert) {
-    if (invert) {
-        HAL_GPIO_WritePin(STEPPERS_DISABLE_PORT, STEPPERS_DISABLE_MASK,GPIO_PIN_RESET);
-    } else {
-        HAL_GPIO_WritePin(STEPPERS_DISABLE_PORT, STEPPERS_DISABLE_MASK,GPIO_PIN_SET);
-    }
+    if (invert) STEPPERS_DISABLE_PORT->BSRR = (STEPPERS_DISABLE_MASK) << 16U;
+    else STEPPERS_DISABLE_PORT->BSRR = STEPPERS_DISABLE_MASK;
 }
 
-void stm32_steppers_pulse_end(PORTPINDEF step_mask) {
+void stm32_steppers_pulse_end(uint16_t step_mask) {
     if ((TIM4->SR & TIM_SR_UIF) != 0) {  // check interrupt source
         TIM4->SR &= ~TIM_SR_UIF;         // clear UIF flag
         TIM4->CNT = 0;
@@ -384,7 +379,7 @@ void stm32_steppers_pulse_end(PORTPINDEF step_mask) {
     }
 }
 
-bool stm32_steppers_pulse_start(bool busy, PORTPINDEF dir_bits, PORTPINDEF step_bits) {
+bool stm32_steppers_pulse_start(bool busy, uint16_t dir_bits, uint16_t step_bits) {
     if ((TIM2->SR & TIM_SR_UIF) != 0) {      // check interrupt source
         TIM2->SR &= ~TIM_SR_UIF;             // clear UIF flag
         TIM2->CNT = 0;
@@ -412,7 +407,7 @@ bool stm32_steppers_pulse_start(bool busy, PORTPINDEF dir_bits, PORTPINDEF step_
  * @param dir_bits
  * @param step_bits
  */
-void stm32_steppers_set(PORTPINDEF dir_bits, PORTPINDEF step_bits) {
+void stm32_steppers_set(uint16_t dir_bits, uint16_t step_bits) {
     STEP_PORT->ODR = (STEP_PORT->ODR & ~STEP_MASK) | (step_bits & STEP_MASK);
     DIRECTION_PORT->ODR = (DIRECTION_PORT->ODR & ~DIRECTION_MASK) | (dir_bits & DIRECTION_MASK);
 }
@@ -465,7 +460,7 @@ void stm32_rs485_init() {
     UART_HandleTypeDef handle = {
             .Instance = USART1,
             .Init = {
-                    .BaudRate = BAUDRATE,
+                    .BaudRate = BAUD_RATE,
                     .WordLength = UART_WORDLENGTH_8B,
                     .StopBits = UART_STOPBITS_1,
                     .Parity = UART_PARITY_NONE,

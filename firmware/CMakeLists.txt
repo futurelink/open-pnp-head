@@ -4,7 +4,7 @@ if (${PLATFORM} STREQUAL src/stm32)
     set(CMAKE_TOOLCHAIN_FILE stm32-f1xx.cmake)
 endif()
 
-project(stm32_pnp_head C CXX ASM)
+project(open_pnp_head C CXX ASM)
 
 cmake_minimum_required(VERSION 3.5.0)
 

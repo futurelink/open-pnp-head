@@ -16,3 +16,12 @@ uint8_t EndStops::get_state() {
             ((pin_state & (1 << LIMIT_3_BIT)) ? 0b0100 : 0) |
             ((pin_state & (1 << LIMIT_4_BIT)) ? 0b1000 : 0);
 }
+
+/**
+ * Return true if all end-stops are at initial position.
+ *
+ * @return
+ */
+bool EndStops::all_at_zero() {
+    return (get_state() == 0);
+}

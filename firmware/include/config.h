@@ -3,6 +3,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#define BAUDRATE            115200
+
 #define GREETING_STRING     "PNP Head / v0.1\n"
 #define LINE_MAX_LENGTH     80
 
@@ -38,7 +40,7 @@
 #define VAC_SENSOR_3_LOCKED_PRESSURE    (-5) // kPa
 #define VAC_SENSOR_4_LOCKED_PRESSURE    (-5) // kPa
 
-#define STEPPER_ENABLE_INVERT           false
+#define STEPPER_ENABLE_INVERT           true
 #define ACCELERATION_TICKS_PER_SECOND   50
 #define STEP_PULSE_MS                   2
 

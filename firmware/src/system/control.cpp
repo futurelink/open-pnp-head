@@ -165,22 +165,24 @@ void Control::execute_realtime() {
     // 2) set global state to STATE_IDLE
     // -----------------------------------------------------------------------------------------------------------------
     if (state->get_pick_place_state() & STATE_PNP_CYCLE_ALARM) {
-        state->set_pick_place_state(0);
+        state->set_pick_place_state(STATE_PNP_CYCLE_NONE);
         state->set_state(STATE_ALARM);
     }
 
+    // Pick or place state
     else if (state->has_state(STATE_CYCLE_PICK | STATE_CYCLE_PLACE)) {
-        if (!state->get_pick_place_state()) {
-            // Pick-place cycle can only be started when nozzle is in neutral position
-            if (motion->check_nozzle_in_position(parser_state.nozzle)) {
+        // Initial point for pick-place cycle
+        if (state->get_pick_place_state() == STATE_PNP_CYCLE_NONE) {
+            // Pick-place cycle can only be started when nozzle is in neutral position and all end-stop
+            // are not active (all heads are in 'upper' position)
+            if (motion->check_nozzle_in_position(parser_state.nozzle) && end_stops->all_at_zero()) {
                 // Start the cycle - move down to pick or place a component
                 state->set_active_nozzle(parser_state.nozzle);
                 motion->move(parser_state.nozzle, parser_state.depth, parser_state.feed);
                 state->set_pick_place_state(STATE_PNP_CYCLE_MOVE_DOWN);
                 steppers_start();
             } else {
-                state->set_pick_place_state(0);
-                state->set_state(STATE_ALARM);
+                state->set_pick_place_state(STATE_PNP_CYCLE_NONE);
             }
         } else if (state->get_pick_place_state() & STATE_PNP_CYCLE_MOVE_DOWN) {
             // If we reached the destination then move to pick wait phase
@@ -194,7 +196,7 @@ void Control::execute_realtime() {
                     state->set_pick_place_state(STATE_PNP_CYCLE_WAIT_VACUUM);
                     state->set_state(state->get_state() & ~STATE_CYCLE_STOP);
                 } else {
-                    state->set_pick_place_state(0);
+                    state->set_pick_place_state(STATE_PNP_CYCLE_NONE);
                     state->set_state(STATE_ALARM);
                 }
             }
@@ -207,28 +209,37 @@ void Control::execute_realtime() {
                 state->set_pick_place_state(STATE_PNP_CYCLE_MOVE_UP);
                 steppers_start();
             }
-        } else if (state->get_pick_place_state() & STATE_PNP_CYCLE_MOVE_UP) {
-            // If we reached the destination (technically - 0 at Z axis), then drop the cycle
-            if (state->has_state(STATE_CYCLE_STOP)) {
-                state->set_pick_place_state(0);
+        } else if (state->get_pick_place_state() & STATE_PNP_CYCLE_MOVE_UP && state->has_state(STATE_CYCLE_STOP)) {
+            // If we reached the destination (technically - 0 at Z axis), then drop the cycle.
+            // Check if we have all end-stops set to 0, if not - then this is an error.
+            if (end_stops->all_at_zero()) {
+                state->set_pick_place_state(STATE_PNP_CYCLE_NONE);
                 state->set_state(STATE_IDLE);
+            } else {
+                state->set_pick_place_state(STATE_PNP_CYCLE_ALARM);
             }
         }
     }
 
+    // Movement state
     else if (state->has_state(STATE_CYCLE_MOVE)) {
         if (!state->get_pick_place_state()) {
             motion->move(parser_state.nozzle, parser_state.depth,parser_state.feed);
             state->set_pick_place_state(STATE_PNP_CYCLE_MOVE);
             steppers_start();
-        } else if (state->get_pick_place_state() & STATE_PNP_CYCLE_MOVE) {
-            if (state->has_state(STATE_CYCLE_STOP)) {
-                state->set_pick_place_state(0);
+        } else if ((state->get_pick_place_state() & STATE_PNP_CYCLE_MOVE) && state->has_state(STATE_CYCLE_STOP)) {
+            // Check if we wanted to move to 0 position, which means end-stops should have gone 0,
+            // if any end-stop is not 0, then this is an error.
+            if ((parser_state.depth == 0) && !end_stops->all_at_zero()) {
+                state->set_pick_place_state(STATE_PNP_CYCLE_ALARM);
+            } else {
+                state->set_pick_place_state(STATE_PNP_CYCLE_NONE);
                 state->set_state(STATE_IDLE);
             }
         }
     }
 
+    // Rotation state
     else if (state->has_state(STATE_CYCLE_ROTATE)) {
         if (!state->get_pick_place_state()) {
             motion->rotate(parser_state.nozzle, parser_state.angle, parser_state.feed);
@@ -236,7 +247,7 @@ void Control::execute_realtime() {
             steppers_start();
         } else if (state->get_pick_place_state() & STATE_PNP_CYCLE_ROTATING) {
             if (state->has_state(STATE_CYCLE_STOP)) {
-                state->set_pick_place_state(0);
+                state->set_pick_place_state(STATE_PNP_CYCLE_NONE);
                 state->set_state(STATE_IDLE);
             }
         }

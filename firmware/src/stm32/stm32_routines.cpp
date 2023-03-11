@@ -465,7 +465,7 @@ void stm32_rs485_init() {
     UART_HandleTypeDef handle = {
             .Instance = USART1,
             .Init = {
-                    .BaudRate = 115200,
+                    .BaudRate = BAUDRATE,
                     .WordLength = UART_WORDLENGTH_8B,
                     .StopBits = UART_STOPBITS_1,
                     .Parity = UART_PARITY_NONE,
@@ -478,11 +478,13 @@ void stm32_rs485_init() {
 
     RS485_RW_PORT->BSRR = (1 << RS485_RW_BIT) << 16U;
 
-    USART1->CR1 |= (USART_CR1_UE     // UART enable
-                   | USART_CR1_RE    // Receiver enable
-                   | USART_CR1_TE);  // Transmitter enable
+    USART1->CR1 |= (USART_CR1_UE    // UART enable
+            | USART_CR1_RE          // Receiver enable
+            | USART_CR1_TE);        // Transmitter enable
 
-    HAL_NVIC_SetPriority(USART1_IRQn, 2, 0);
+    USART1->CR3 |= USART_CR3_EIE;
+
+    HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(USART1_IRQn);
 }
 
@@ -507,8 +509,11 @@ bool stm32_rs485_transmit_byte(uint8_t byte) {
 
 bool stm32_rs485_receive_byte(uint8_t *byte) {
     if (USART1->SR & USART_SR_RXNE) {
-        *byte = USART1->DR;
+        *byte = USART1->DR & 0x00ff;
         return true;
+    } else {
+        // Clear data register on overrun or framing error
+        if (USART1->SR & (USART_SR_ORE | USART_SR_FE)) (void) USART1->DR;
     }
     return false;
 }
@@ -528,7 +533,7 @@ void stm32_vacuum_sensors_init() {
     ADC1->CR1 |= ADC_CR1_JAUTO;             // Enable injected channels auto conversion
 
     ADC1->CR2 = ADC_CR2_ADON;               // Turn on ADC
-    //ADC1->CR2 |= ADC_CR2_CONT;              // Continuous conversion mode
+    //ADC1->CR2 |= ADC_CR2_CONT;            // Continuous conversion mode
     ADC1->CR2 |= ADC_CR2_EXTSEL;            // Select external trigger (SWSTART)
     ADC1->CR2 |= ADC_CR2_EXTTRIG;           // Enable external trigger
 

@@ -71,7 +71,7 @@ void TIM4_IRQHandler() {
 
 void USART1_IRQHandler() {
     if (USART1->SR & USART_SR_RXNE) System::usart_receive(); // Receive
-    if (USART1->CR1 & USART_CR1_TXEIE) System::usart_transmit(); // Transmit
+    else if (USART1->CR1 & USART_CR1_TXEIE) System::usart_transmit(); // Transmit
 }
 
 void ADC1_2_IRQHandler() {

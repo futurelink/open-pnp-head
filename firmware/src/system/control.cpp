@@ -18,6 +18,8 @@
   along with open-pnp-head.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "functions.h"
+
 #include "system/control.h"
 #include "system/macros.h"
 
@@ -30,7 +32,6 @@ Control::Control(Settings *settings, Report *report, Motion *motion, State *stat
     this->state = state;
     this->report = report;
     this->motion = motion;
-    this->callbacks = callbacks;
 
     this->steppers = new Steppers(settings, state, callbacks);
     this->relay = new Relay();
@@ -64,7 +65,7 @@ uint8_t Control::parse_line(char *line) {
         if ((line_state->letter < 'A') || (line_state->letter > 'Z')) return STATUS_EXPECTED_COMMAND_LETTER;
 
         char_counter++;
-        if (!read_float(line, &char_counter, &line_state->value)) return STATUS_BAD_NUMBER_FORMAT;
+        if (!Functions::read_float(line, &char_counter, &line_state->value)) return STATUS_BAD_NUMBER_FORMAT;
 
         // Get integer value for command code (e.g. M5, P10)
         line_state->int_value = (uint8_t) truncf(line_state->value);
@@ -92,7 +93,7 @@ uint8_t Control::parse_line(char *line) {
     // Command must have valid nozzle number
     if (line_state->command) if (parser_state.nozzle > ROTARY_AXIS_N) return STATUS_CODE_MAX_VALUE_EXCEEDED;
 
-    if (result == STATUS_OK) result = callbacks->execute_command(&parser_state);
+    if (result == STATUS_OK) result = execute_command();
 
     return result;
 }
@@ -233,10 +234,13 @@ void Control::execute_realtime() {
                 }
             }
         } else if (state->get_pick_place_state() & STATE_PNP_CYCLE_WAIT_VACUUM) {
+#ifdef VAC_SENSORS_N
             // Follow the vacuum measure and time and decide if we picked up a component.
             // If unsuccessful - then set to alarm state, otherwise go up
             if (state->is_vac_wait_timeout()) state->set_pick_place_state(STATE_PNP_CYCLE_ALARM);
-            else if (vacuum->has_component(state->get_active_nozzle())) {
+            else
+#endif
+                if (vacuum->has_component(state->get_active_nozzle())) {
                 motion->move(state->get_active_nozzle(), 0, parser_state.feed);
                 state->set_pick_place_state(STATE_PNP_CYCLE_MOVE_UP);
                 steppers_start();
@@ -333,73 +337,16 @@ uint8_t Control::execute_command() {
 }
 
 /**
- * Extracts a floating point value from a string. The following code is based loosely on
- * the avr-libc strtod() function by Michael Stumpf and Dmitry Xmelkov and many freely
- * available conversion method examples, but has been highly optimized for Grbl. For known
- * CNC applications, the typical decimal value is expected to be in the range of E0 to E-4.
- * Scientific notation is officially not supported by g-code, and the 'E' character may
- * be a g-code word on some CNC systems. So, 'E' notation will not be recognized.
- * NOTE: Thanks to Radu-Eosif Mihailescu for identifying the issues with using strtod().
+ * Runs homing cycle for belt-driven linear axes.
+ * Not applicable for rocker-heads.
+ * @return
  */
-bool Control::read_float(const char *line, uint8_t *char_counter, float *float_ptr) {
-    auto ptr = (char*)line + *char_counter;
-    uint8_t c = *ptr++; // Grab first character and increment pointer. No spaces assumed in line.
-
-    // Capture initial positive/minus character
-    int is_negative = false;
-    if (c == '-') {
-        is_negative = true;
-        c = *ptr++;
-    } else if (c == '+') {
-        c = *ptr++;
-    }
-
-    // Extract number into fast integer. Track decimal in terms of exponent value.
-    uint32_t int_val = 0;
-    int8_t exp = 0;
-    uint8_t n_digit = 0;
-    int is_decimal = false;
-    while (true) {
-        c -= '0';
-        if (c <= 9) {
-            n_digit++;
-            if (n_digit <= MAX_INT_DIGITS) {
-                if (is_decimal) { exp--; }
-                int_val = (((int_val << 2) + int_val) << 1) + c; // intval*10 + c
-            } else {
-                if (!(is_decimal)) exp++;  // Drop overflow digits
-            }
-        } else if (c == (('.'-'0') & 0xff)  &&  !is_decimal) {
-            is_decimal = true;
-        } else break;
-        c = *ptr++;
-    }
-
-    // Return if no digits have been read.
-    if (!n_digit) return false;
-
-    // Convert integer into floating point.
-    auto f_val = (float) int_val;
-
-    // Apply decimal. Should perform no more than two floating point multiplications for the
-    // expected range of E0 to E-4.
-    if (f_val != 0) {
-        while (exp <= -2) {
-            f_val *= 0.01f;
-            exp += 2;
-        }
-        if (exp < 0) f_val *= 0.1f;
-        else if (exp > 0) {
-            do {
-                f_val *= 10.0f;
-            } while (--exp > 0);
-        }
-    }
-
-    *float_ptr = (is_negative) ? -f_val : f_val; // Assign floating point value with correct sign.
-    *char_counter = ptr - line - 1;              // Set char_counter to next statement
-
-    return true;
+uint8_t Control::homing() {
+#ifdef ROCKER_HEAD
+    return STATUS_CODE_UNSUPPORTED_COMMAND;
+#else
+    return STATUS_OK;
+#endif
 }
 
 void Control::end_stops_interrupt() { end_stops->interrupt(); }

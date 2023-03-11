@@ -61,7 +61,6 @@ private:
 
     static motion_block_t   *get_current_block();
     static void             discard_current_block();
-    static uint8_t          execute_command(parser_state_t *parser_state);
 
 public:
     static void run();

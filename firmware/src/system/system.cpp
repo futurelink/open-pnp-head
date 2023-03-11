@@ -22,8 +22,7 @@
 
 Callbacks System::callbacks = {
         .get_current_block      = get_current_block,
-        .discard_current_block  = discard_current_block,
-        .execute_command        = execute_command
+        .discard_current_block  = discard_current_block
 };
 
 Settings       *System::settings     = new Settings();
@@ -64,6 +63,7 @@ void System::run() {
                 uint8_t result;
                 if (!line_too_long) {
                     if (line[0] == '?') { result = STATUS_OK; control->report_state(); }
+                    if (line[0] == 'H') result = control->homing();
                     else result = control->parse_line(line);
                 } else {
                     result = STATUS_OVERFLOW;
@@ -117,6 +117,3 @@ void System::external_interrupt_limit() { control->end_stops_interrupt(); }
 void System::usart_transmit() { serial->transmit(); }
 void System::usart_receive() { serial->receive(); }
 
-uint8_t System::execute_command(parser_state_t *parser_state) {
-    return control->execute_command();
-}

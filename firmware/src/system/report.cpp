@@ -58,18 +58,19 @@ Report::Report(Settings *settings, Serial *serial, State *state) {
     print_axis_values(print_position, LINEAR_AXIS_N);
     free(print_position);
 
+#ifdef VAC_SENSORS_N
     serial->print_string("|V:");
     for (uint8_t vac = 0; vac < VAC_SENSORS_N; vac++) {
         serial->print_float(vacuum->get_value(vac), 4);
         if (vac < VAC_SENSORS_N - 1) serial->write(',');
     }
+#endif
 
     if (end_stops_state) {
         serial->print_string("|Pn:");
-        if ((end_stops_state & (1 << 0)) != 0) serial->write('A');
-        if ((end_stops_state & (1 << 1)) != 0) serial->write('B');
-        if ((end_stops_state & (1 << 2)) != 0) serial->write('C');
-        if ((end_stops_state & (1 << 3)) != 0) serial->write('D');
+        for (uint8_t idx = 0; idx < ROTARY_AXIS_N; idx++) {
+            if ((end_stops_state & (1 << idx)) != 0) serial->write('A' + idx);
+        }
     }
 
     //serial->print_string("|F:");

@@ -57,7 +57,6 @@ private:
     Settings        *settings;
     Report          *report;
     Motion          *motion;
-    Callbacks       *callbacks;
 
     Steppers        *steppers;
     Relay           *relay;
@@ -66,7 +65,6 @@ private:
 
     parser_state_t  parser_state;
 
-    static bool read_float(const char *line, uint8_t *char_counter, float *float_ptr);
     uint8_t     process_relay();
     void        check_and_disable_steppers();
 
@@ -79,6 +77,7 @@ public:
     uint8_t     parse_line(char *line);
     uint8_t     process_parameter();
 
+    uint8_t     homing();
     uint8_t     execute_command();
     void        execute_realtime();
 

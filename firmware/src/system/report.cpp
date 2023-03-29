@@ -32,7 +32,7 @@ Report::Report(Settings *settings, Serial *serial, State *state) {
  * Report current machine state and substates
  * @param st
   */
- void Report::print_state(Vacuum *vacuum, uint8_t end_stops_state) {
+ void Report::print_state(Vacuum *vacuum, uint8_t end_stops_state, uint8_t relay_state, uint32_t light_state) {
     serial->print_string("<");
     auto st = state->get_state() & ~STATE_CYCLE_STOP;
     switch (st) {
@@ -66,15 +66,32 @@ Report::Report(Settings *settings, Serial *serial, State *state) {
     }
 #endif
 
+    if (relay_state) {
+        serial->print_string("|R:");
+        for (uint8_t idx = 0; idx < RELAY_N; idx++) {
+            if ((relay_state & (1 << idx)) != 0) serial->write('A' + idx);
+        }
+    }
+
+    if (light_state) {
+        serial->print_string("|L:");
+#ifdef WS8212LED
+        serial->print_integer((int32_t)(light_state & 0xff));           // Red
+        serial->print_string(",");
+        serial->print_integer((int32_t)(light_state & 0xff00) >> 8);    // Green
+        serial->print_string(",");
+        serial->print_integer((int32_t)(light_state & 0xff0000) >> 16); // Blue
+#else
+        serial->print_string("0");
+#endif
+    }
+
     if (end_stops_state) {
         serial->print_string("|Pn:");
         for (uint8_t idx = 0; idx < ROTARY_AXIS_N; idx++) {
             if ((end_stops_state & (1 << idx)) != 0) serial->write('A' + idx);
         }
     }
-
-    //serial->print_string("|F:");
-    //serial->print_float(steppers->get_realtime_rate(), 1);
 
     serial->print_string(">\n");
 }

@@ -56,6 +56,10 @@
 #define VAC_SENSOR_3_MIN_PRESSURE       (-100) // kPa
 #define VAC_SENSOR_4_MIN_PRESSURE       (-100) // kPa
 
+// Number of relay outputs
+// -----------------------
+#define RELAY_N                         4
+
 // Vacuum values with components sucked to nozzle
 // ----------------------------------------------
 #define VAC_SENSOR_1_LOCKED_PRESSURE    (-0.01) // kPa

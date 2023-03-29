@@ -39,7 +39,7 @@ public:
 
     void status_message(uint8_t msg);
 
-    void print_state(Vacuum *vacuum, uint8_t end_stops_state);
+    void print_state(Vacuum *vacuum, uint8_t end_stops_state, uint8_t relay_state, uint32_t light_state);
     void print_line_feed();
     void print_uint8_base10(uint8_t n);
     void print_axis_values(const float *values, uint8_t n_axis);

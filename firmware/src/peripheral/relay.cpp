@@ -23,9 +23,17 @@
 
 void Relay::init() {
     stm32_relay_init();
-    stm32_set_relay_state(0x00);
+    stm32_relay_set_state(0x00);
 }
 
 void Relay::set_state(uint8_t state) {
-    stm32_set_relay_state(state);
+    stm32_relay_set_state(state);
+}
+
+uint8_t Relay::get_state() const {
+    auto pin_state = stm32_relay_get_state();
+    return ((pin_state & (1 << RELAY_0_BIT)) ? 0b0001 : 0) |
+           ((pin_state & (1 << RELAY_1_BIT)) ? 0b0010 : 0) |
+           ((pin_state & (1 << RELAY_2_BIT)) ? 0b0100 : 0) |
+           ((pin_state & (1 << RELAY_3_BIT)) ? 0b1000 : 0);
 }

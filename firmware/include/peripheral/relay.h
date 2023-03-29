@@ -27,6 +27,7 @@ class Relay {
 public:
     void init();
     void set_state(uint8_t state);
+    uint8_t get_state() const;
 };
 
 #endif // RELAY_H

@@ -58,8 +58,9 @@ void stm32_eeprom_put_char(uint32_t addr, uint8_t value);
 // Relay & valve interaction routines
 // ---------------------------------------------------------------------------------------------------------------------
 void stm32_relay_init();
-uint8_t stm32_get_relay_state(uint8_t relay);
-void stm32_set_relay_state(uint8_t state);
+uint16_t stm32_relay_get_state();
+uint8_t stm32_relay_get_single_state(uint8_t relay);
+void stm32_relay_set_state(uint8_t state);
 
 // Stepper routines
 // ---------------------------------------------------------------------------------------------------------------------

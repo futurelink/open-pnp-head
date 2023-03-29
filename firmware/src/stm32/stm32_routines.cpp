@@ -19,6 +19,7 @@
 */
 
 #include "system/settings.h"
+#include "system/macros.h"
 #include "stm32/stm32_routines.h"
 
 #define EEPROM_START_ADDRESS    ((uint32_t) 0x0801FC00) // Last 1K page (127K offset)
@@ -136,12 +137,15 @@ void stm32_light_run_pwm() {
     TIM3->DIER |= TIM_DMA_CC3;          // Enable the TIM Output Capture/Compare 3 request
     TIM3->CCER |= (TIM_CCx_ENABLE << TIM_CHANNEL_3);  // Enable the Capture compare channel
     TIM3->CR1 |= TIM_CR1_CEN;           // Enable timer
+
 }
 
 void stm32_light_set_color(const uint32_t color) {
     WS8212LED_Sequence = 0;
-
     uint8_t index = 0;
+
+    DISABLE_IRQ;
+
     for (int8_t bit = 23; bit >= 0; bit--) {
         if (color & (1 << bit)) WS8212LED_Buffer[index] = 70;     // PWM fill for '1'
         else WS8212LED_Buffer[index] = 15;                        // PWM fill for '0'
@@ -149,6 +153,8 @@ void stm32_light_set_color(const uint32_t color) {
     }
 
     stm32_light_run_pwm(); // Run PWM generation
+
+    ENABLE_IRQ;
 }
 #endif
 
@@ -335,18 +341,23 @@ void stm32_eeprom_put_char(uint32_t addr, uint8_t value) {
     EE_Buffer[addr] = value;
 }
 
-uint8_t stm32_get_relay_state(uint8_t relay) {
+uint16_t stm32_relay_get_state() {
+    return (RELAY_PORT->ODR & RELAY_MASK);
+}
+
+uint8_t stm32_relay_get_single_state(uint8_t relay) {
+    auto state = stm32_relay_get_state();
     switch (relay) {
-        case 0: return RELAY_PORT->ODR & (1 << RELAY_0_BIT);
-        case 1: return RELAY_PORT->ODR & (1 << RELAY_1_BIT);
-        case 2: return RELAY_PORT->ODR & (1 << RELAY_2_BIT);
-        case 3: return RELAY_PORT->ODR & (1 << RELAY_3_BIT);
-        case 4: return LIGHT_PORT->ODR & (1 << LIGHT_BIT);
+        case 0: return state & (1 << RELAY_0_BIT);
+        case 1: return state & (1 << RELAY_1_BIT);
+        case 2: return state & (1 << RELAY_2_BIT);
+        case 3: return state & (1 << RELAY_3_BIT);
+        case 4: return state & (1 << LIGHT_BIT);
         default: return 0;
     }
 }
 
-void stm32_set_relay_state(uint8_t state) {
+void stm32_relay_set_state(uint8_t state) {
     uint32_t value =
             ((state & 0x01) ? (1 << RELAY_0_BIT) : ((1 << RELAY_0_BIT) << 16u)) |
             ((state & 0x02) ? (1 << RELAY_1_BIT) : ((1 << RELAY_1_BIT) << 16u)) |

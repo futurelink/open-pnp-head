@@ -59,17 +59,18 @@
 // Define homing/hard limit switch input pins and limit interrupt vectors
 // NOTE: All limit bit pins must be on the same port
 #define LIMIT_PORT       GPIOA
-#define LIMIT_1_BIT      4
-#define LIMIT_2_BIT      5
-#define LIMIT_3_BIT      6
-#define LIMIT_4_BIT      7
-#define LIMIT_MASK       ((1 << LIMIT_1_BIT) | (1 << LIMIT_2_BIT) | (1 << LIMIT_3_BIT) | (1 << LIMIT_4_BIT))
+#define LIMIT_0_BIT      4
+#define LIMIT_1_BIT      5
+#define LIMIT_2_BIT      6
+#define LIMIT_3_BIT      7
+#define LIMIT_MASK       ((1 << LIMIT_0_BIT) | (1 << LIMIT_1_BIT) | (1 << LIMIT_2_BIT) | (1 << LIMIT_3_BIT))
 
 #define RELAY_PORT      GPIOA
 #define RELAY_0_BIT     8
 #define RELAY_1_BIT     11
 #define RELAY_2_BIT     12
 #define RELAY_3_BIT     15
+#define RELAY_MASK      ((1 << RELAY_0_BIT) | (1 << RELAY_1_BIT) | (1 << RELAY_2_BIT) | (1 << RELAY_3_BIT))
 
 #define LIGHT_PORT      GPIOB
 #define LIGHT_BIT       0

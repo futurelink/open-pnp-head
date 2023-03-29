@@ -79,11 +79,16 @@ uint8_t Control::parse_line(char *line) {
             result = process_parameter();
         } else {
             switch(parser_state.line_state.letter) {
+                // 1st modal group
                 case 'R': line_state->command = COMMAND_ROTATE; parser_state.nozzle = line_state->int_value; break;
                 case 'T': line_state->command = COMMAND_PICK; parser_state.nozzle = line_state->int_value; break;
                 case 'P': line_state->command = COMMAND_PLACE; parser_state.nozzle = line_state->int_value; break;
-                case 'M': line_state->command = COMMAND_MOVE; parser_state.nozzle = line_state->int_value; break;
+                case 'G': line_state->command = COMMAND_MOVE; parser_state.nozzle = line_state->int_value; break;
+
+                // 2nd modal group
                 case 'L': line_state->command = COMMAND_LIGHT; break;
+
+                //  3rd modal group
                 case 'V': line_state->command = COMMAND_RELAY; result = process_relay(); break;
                 default: result = STATUS_CODE_UNSUPPORTED_COMMAND;
             }
@@ -362,4 +367,9 @@ void Control::steppers_start() {
     steppers->wake_up();
 }
 
-void Control::report_state() { report->print_state(vacuum, end_stops->get_state()); }
+void Control::report_state() {
+    report->print_state(vacuum,
+                        end_stops->get_state(),
+                        relay->get_state(),
+                        parser_state.light_color);
+}

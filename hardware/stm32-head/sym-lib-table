@@ -1,3 +1,4 @@
 (sym_lib_table
-  (lib (name "Vacuum sensors")(type "KiCad")(uri "C:/WORK/HLDI/Vacuum sensors.kicad_sym")(options "")(descr ""))
+  (lib (name "Vacuum sensors")(type "KiCad")(uri "${KIPRJMOD}/Vacuum sensors.kicad_sym")(options "")(descr ""))
+  (lib (name "TCST")(type "KiCad")(uri "${KIPRJMOD}/TCST.kicad_sym")(options "")(descr ""))
 )

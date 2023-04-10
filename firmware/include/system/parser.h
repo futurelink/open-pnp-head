@@ -47,6 +47,7 @@ typedef struct parser_state_t {
     float           depth;          // Pick-Place cycle var indicates how deep the nozzle should go
     float           angle;          // Pick-Place rotate cycle var indicates rotation angle
     float           feed;           // Pick-Place or Move cycle feed rate
+    uint8_t         sensor;         // Vacuum sensor number
     uint32_t        light_color;
 } parser_state_t;
 

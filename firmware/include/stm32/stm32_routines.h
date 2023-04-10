@@ -67,7 +67,7 @@ void stm32_relay_set_state(uint8_t state);
 void stm32_stepper_init();
 void stm32_steppers_enable();
 void stm32_steppers_disable();
-void stm32_steppers_wake_up(uint8_t step_pulse_time, uint16_t cycles_per_tick, uint16_t prescaler);
+void stm32_steppers_wake_up(uint8_t step_pulse_time, uint16_t cycles_per_tick);
 void stm32_steppers_go_idle();
 void stm32_steppers_set(uint16_t dir_bits, uint16_t step_bits);
 void stm32_steppers_set_timer(uint16_t value);

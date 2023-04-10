@@ -144,8 +144,7 @@ void stm32_light_set_color(const uint32_t color) {
     WS8212LED_Sequence = 0;
     uint8_t index = 0;
 
-    DISABLE_IRQ;
-
+    DISABLE_IRQ
     for (int8_t bit = 23; bit >= 0; bit--) {
         if (color & (1 << bit)) WS8212LED_Buffer[index] = 70;     // PWM fill for '1'
         else WS8212LED_Buffer[index] = 15;                        // PWM fill for '0'
@@ -153,8 +152,7 @@ void stm32_light_set_color(const uint32_t color) {
     }
 
     stm32_light_run_pwm(); // Run PWM generation
-
-    ENABLE_IRQ;
+    ENABLE_IRQ
 }
 #endif
 
@@ -449,7 +447,7 @@ void stm32_steppers_set_timer(uint16_t value) {
  * @param step_pulse_time
  * @param cycles_per_tick
  */
-void stm32_steppers_wake_up(uint8_t step_pulse_time, uint16_t cycles_per_tick, uint16_t prescaler) {
+void stm32_steppers_wake_up(uint8_t step_pulse_time, uint16_t cycles_per_tick) {
     TIM4->ARR = step_pulse_time - 1;
     TIM4->EGR = 1; // Immediate reload
     TIM4->SR &= ~TIM_SR_UIF;
@@ -512,31 +510,35 @@ void stm32_rs485_init() {
 }
 
 void stm32_rs485_start_transmission() {
+    DISABLE_IRQ
+    RS485_RW_PORT->BSRR = (1 << RS485_RW_BIT);
+    for (uint32_t i = 0; i < TICKS_PER_MICROSECOND; i++) asm volatile("nop"); // Delay 1ms to allow take a line
     USART1->CR1 |= USART_CR1_TXEIE; // Turn on TX and interrupt
+    ENABLE_IRQ
 }
 
 void stm32_rs485_stop_transmission() {
+    DISABLE_IRQ
     USART1->CR1 &= ~USART_CR1_TXEIE; // Turn off TX and interrupt
+    RS485_RW_PORT->BSRR = (1 << RS485_RW_BIT) << 16U;
+    ENABLE_IRQ
 }
 
 bool stm32_rs485_transmit_byte(uint8_t byte) {
     if (USART1->SR & USART_SR_TXE) {
-        RS485_RW_PORT->BSRR = (1 << RS485_RW_BIT);
         USART1->DR = byte;
         while (!(USART1->SR & USART_SR_TC)) asm volatile("nop");
-        RS485_RW_PORT->BSRR = (1 << RS485_RW_BIT) << 16U;
         return true;
     }
     return false;
 }
 
 bool stm32_rs485_receive_byte(uint8_t *byte) {
-    if (USART1->SR & USART_SR_RXNE) {
+    // Clear data register on overrun or framing error
+    if (USART1->SR & (USART_SR_ORE | USART_SR_FE | USART_SR_NE)) (void) USART1->DR;
+    else if (USART1->SR & USART_SR_RXNE) {
         *byte = USART1->DR & 0x00ff;
         return true;
-    } else {
-        // Clear data register on overrun or framing error
-        if (USART1->SR & (USART_SR_ORE | USART_SR_FE)) (void) USART1->DR;
     }
     return false;
 }

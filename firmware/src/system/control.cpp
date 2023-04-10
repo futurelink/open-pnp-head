@@ -18,6 +18,7 @@
   along with open-pnp-head.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cstring>
 #include "functions.h"
 
 #include "system/control.h"
@@ -45,7 +46,7 @@ void Control::init() {
     end_stops->init();
     vacuum->init();
 
-    this->parser_state = {};
+    memset(&parser_state, 0, sizeof(parser_state_t));
 }
 
 uint8_t Control::parse_line(char *line) {
@@ -84,6 +85,7 @@ uint8_t Control::parse_line(char *line) {
                 case 'T': line_state->command = COMMAND_PICK; parser_state.nozzle = line_state->int_value; break;
                 case 'P': line_state->command = COMMAND_PLACE; parser_state.nozzle = line_state->int_value; break;
                 case 'G': line_state->command = COMMAND_MOVE; parser_state.nozzle = line_state->int_value; break;
+                case 'S': line_state->command = COMMAND_READ_SENSOR; parser_state.sensor = line_state->int_value; break;
 
                 // 2nd modal group
                 case 'L': line_state->command = COMMAND_LIGHT; break;
@@ -96,7 +98,9 @@ uint8_t Control::parse_line(char *line) {
     }
 
     // Command must have valid nozzle number
-    if (line_state->command) if (parser_state.nozzle > ROTARY_AXIS_N) return STATUS_CODE_MAX_VALUE_EXCEEDED;
+    if (line_state->command)
+        if ((parser_state.nozzle > ROTARY_AXIS_N) || (parser_state.sensor > VAC_SENSORS_N))
+            return STATUS_CODE_MAX_VALUE_EXCEEDED;
 
     if (result == STATUS_OK) result = execute_command();
 
@@ -333,6 +337,10 @@ uint8_t Control::execute_command() {
 
         case COMMAND_RELAY:
             relay->set_state(parser_state.relay);
+            break;
+
+        case COMMAND_READ_SENSOR:
+            report->print_float(vacuum->get_value(parser_state.sensor));
             break;
 
         default: break;

@@ -134,7 +134,7 @@ void Steppers::wake_up() {
     // Set step pulse time. Ad-hoc computation from oscilloscope. Uses two's complement.
     st.step_pulse_time = STEP_PULSE_MS * TICKS_PER_MICROSECOND;
 
-    stm32_steppers_wake_up(st.step_pulse_time, st.exec_segment->cycles_per_tick, 0);
+    stm32_steppers_wake_up(st.step_pulse_time, st.exec_segment->cycles_per_tick);
 }
 
 /**

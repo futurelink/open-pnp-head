@@ -107,6 +107,10 @@ void Report::print_axis_values(const float *values, uint8_t n_axis) {
     }
 }
 
+void Report::print_float(float val) {
+     serial->print_float(val, 4);
+ }
+
 /**
  * Prints an uint8 variable in base 10.
  * @param n
@@ -125,8 +129,8 @@ void Report::print_uint8_base10(uint8_t n) {
     }
 
     serial->write('0' + n);
-    if (digit_b) { serial->write(digit_b); }
-    if (digit_a) { serial->write(digit_a); }
+    if (digit_b) serial->write(digit_b);
+    if (digit_a) serial->write(digit_a);
 }
 
 void Report::status_message(uint8_t code) {

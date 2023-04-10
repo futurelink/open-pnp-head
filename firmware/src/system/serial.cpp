@@ -66,8 +66,8 @@ uint8_t Serial::read() {
     auto tail = rx_buffer_tail; // Temporary rx_buffer_tail (to optimize for volatile)
     if (rx_buffer_head == tail) return SERIAL_NO_DATA;
 
-    auto data = rx_buffer[tail++];
-    if (tail == RX_BUFFER_SIZE) tail = 0;
+    auto data = rx_buffer[tail];
+    if (++tail == RX_BUFFER_SIZE) tail = 0;
     rx_buffer_tail = tail;
 
     return data;
@@ -149,6 +149,10 @@ void Serial::transmit() {
         return; // Nothing to send, bail.
     }
 
+    //                 * - data to be sent
+    //                 -------------------------------------------------------------------------------------------------
+    // if head > tail:                                     Tail ************************ Head
+    // if head < tail: ******************* Head                               Tail *************************************
     if (tx_buffer_head > tx_buffer_tail) {
         if (!stm32_rs485_transmit_byte(tx_buffer[tx_buffer_tail])) return;
         tx_buffer_tail++;
@@ -159,9 +163,6 @@ void Serial::transmit() {
             tx_buffer_tail++;
         } else tx_buffer_tail = 0;
     }
-
-    // Stop transmission, buffer is empty
-    tx_buffer_tail = tx_buffer_tail;
 }
 
 /**

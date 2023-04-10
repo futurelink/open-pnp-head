@@ -44,6 +44,9 @@ void System::run() {
 
     settings->load();
 
+    // Delay
+    for (long i = 0; i < 1000; i++) asm volatile("nop");
+
     serial->print_string(GREETING_STRING);
 
     main_loop(); // Run main loop until reset signal is caught
@@ -63,7 +66,7 @@ void System::run() {
                 uint8_t result;
                 if (!line_too_long) {
                     if (line[0] == '?') { result = STATUS_OK; control->report_state(); }
-                    if (line[0] == 'H') result = control->homing();
+                    else if (line[0] == 'H') result = control->homing();
                     else result = control->parse_line(line);
                 } else {
                     result = STATUS_OVERFLOW;
@@ -116,4 +119,3 @@ void System::external_interrupt_limit() { control->end_stops_interrupt(); }
  */
 void System::usart_transmit() { serial->transmit(); }
 void System::usart_receive() { serial->receive(); }
-

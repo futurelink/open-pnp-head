@@ -24,10 +24,16 @@
 #include "state.h"
 #include "serial.h"
 #include "stepper.h"
-#include "report.h"
 #include "settings.h"
-#include "control.h"
 #include "motion.h"
+
+#ifdef MODBUS
+#include "modbus.h"
+#include "modbus_control.h"
+#else
+#include "report.h"
+#include "text_control.h"
+#endif
 
 #include "peripheral/relay.h"
 #include "peripheral/endstops.h"
@@ -42,10 +48,16 @@ class System {
 private:
     static State    *state;
     static Settings *settings;
+    static Motion   *motion;
+
+#ifdef MODBUS
+    static ModBus   *modbus;
+    static Control  *control;
+#else
     static Serial   *serial;
     static Report   *report;
     static Control  *control;
-    static Motion   *motion;
+#endif
 
     static Callbacks callbacks;
 
@@ -61,6 +73,7 @@ private:
 
     static motion_block_t   *get_current_block();
     static void             discard_current_block();
+    static void             command_executed(uint8_t status);
 
 public:
     static void run();
@@ -73,6 +86,7 @@ public:
 
     static void external_interrupt_limit();
 
+    static void silence_timer_fired();
     static void usart_transmit();
     static void usart_receive();
 };

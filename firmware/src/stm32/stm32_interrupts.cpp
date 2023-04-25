@@ -61,6 +61,17 @@ void EXTI15_10_IRQHandler(void) {
     System::external_interrupt_limit();
 }
 
+void TIM1_UP_IRQHandler() {
+    if (TIM1->SR & TIM_SR_UIF) {
+        TIM1->SR &= ~TIM_SR_UIF;
+        System::silence_timer_fired();
+    }
+
+    if (TIM1->SR & TIM_SR_TIF) {
+        TIM1->SR &= ~TIM_SR_TIF;
+    }
+}
+
 void TIM2_IRQHandler() {
     System::steppers_pulse_start();
 }

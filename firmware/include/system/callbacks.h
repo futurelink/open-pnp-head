@@ -27,6 +27,7 @@
 typedef struct {
     motion_block_t  *(*get_current_block)();
     void            (*discard_current_block)();
+    void            (*command_executed)(uint8_t status);
 } Callbacks;
 
 #endif // CALLBACKS_H

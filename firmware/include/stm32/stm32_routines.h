@@ -77,6 +77,8 @@ void stm32_steppers_pulse_end(uint16_t step_mask);
 // RS-485 half duplex and serial interaction routines
 // ---------------------------------------------------------------------------------------------------------------------
 void stm32_rs485_init();
+void stm32_rs485_silence_timer_init();
+void stm32_rs485_silence_timer_reset();
 bool stm32_rs485_transmit_byte(uint8_t byte);
 bool stm32_rs485_receive_byte(uint8_t *byte);
 void stm32_rs485_start_transmission();

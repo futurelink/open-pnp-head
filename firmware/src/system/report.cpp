@@ -28,6 +28,11 @@ Report::Report(Settings *settings, Serial *serial, State *state) {
     this->settings = settings;
 }
 
+uint8_t Report::serial_read() {
+    return this->serial->read();
+}
+
+
 /**
  * Report current machine state and substates
  * @param st
@@ -111,34 +116,12 @@ void Report::print_float(float val) {
      serial->print_float(val, 4);
  }
 
-/**
- * Prints an uint8 variable in base 10.
- * @param n
- */
-void Report::print_uint8_base10(uint8_t n) {
-    uint8_t digit_a = 0;
-    uint8_t digit_b = 0;
-    if (n >= 100) { // 100-255
-        digit_a = '0' + n % 10;
-        n /= 10;
-    }
-
-    if (n >= 10) { // 10-99
-        digit_b = '0' + n % 10;
-        n /= 10;
-    }
-
-    serial->write('0' + n);
-    if (digit_b) serial->write(digit_b);
-    if (digit_a) serial->write(digit_a);
-}
-
 void Report::status_message(uint8_t code) {
     if (code == 0) {
         serial->print_string("ok\r\n");
     } else {
         serial->print_string("error:");
-        print_uint8_base10(code);
+        serial->print_uint8_base10(code);
         print_line_feed();
     }
 }

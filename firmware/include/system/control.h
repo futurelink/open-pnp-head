@@ -8,6 +8,7 @@
 #include "report.h"
 #include "parser.h"
 #include "motion.h"
+#include "modbus.h"
 
 #include "peripheral/relay.h"
 #include "peripheral/vacuum.h"
@@ -53,36 +54,30 @@
 #define STATUS_CODE_MAX_VALUE_EXCEEDED         38
 
 class Control {
-private:
+protected:
     State           *state;
     Settings        *settings;
-    Report          *report;
     Motion          *motion;
 
     Steppers        *steppers;
     Relay           *relay;
     EndStops        *end_stops;
     Vacuum          *vacuum;
+    Callbacks       *callbacks;
 
-    parser_state_t  parser_state;
-
-    uint8_t     process_relay();
     void        check_and_disable_steppers();
 
 public:
-    explicit    Control(Settings *settings, Report *report, Motion *motion, State *state, Callbacks *callbacks);
-    void        init();
+    explicit    Control(Settings *settings, Motion *motion, State *state, Callbacks *callbacks);
+    virtual void init();
 
     State       *get_state();
-
-    uint8_t     parse_line(char *line);
-    uint8_t     process_parameter();
+    virtual void read_serial_input();
 
     uint8_t     homing();
     uint8_t     execute_command();
     void        execute_realtime();
 
-    void        report_state();
     void        end_stops_interrupt();
     void        steppers_start();
     void        steppers_pulse_start();

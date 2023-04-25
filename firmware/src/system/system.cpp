@@ -22,15 +22,21 @@
 
 Callbacks System::callbacks = {
         .get_current_block      = get_current_block,
-        .discard_current_block  = discard_current_block
+        .discard_current_block  = discard_current_block,
+        .command_executed       = command_executed
 };
 
 Settings       *System::settings     = new Settings();
-Serial         *System::serial       = new Serial();
 State          *System::state        = new State();
 Motion         *System::motion       = new Motion(settings, state);
+#ifdef MODBUS
+ModBus         *System::modbus       = new ModBus(0x55, settings, state);
+Control        *System::control      = new ModBusControl(settings, modbus, motion, state, &callbacks);
+#else
+Serial         *System::serial       = new Serial();
 Report         *System::report       = new Report(settings, serial, state);
-Control        *System::control      = new Control(settings, report, motion, state, &callbacks);
+Control        *System::control      = new TextControl(settings, report, motion, state, &callbacks);
+#endif
 
 void System::run() {
     stm32_init();
@@ -38,16 +44,18 @@ void System::run() {
     stm32_system_init();
     stm32_light_init();
 
-    state->init();
+#ifndef MODBUS
     serial->init();
-    control->init();
+#endif
 
+    state->init();
+    control->init();
     settings->load();
 
-    // Delay
-    for (long i = 0; i < 1000; i++) asm volatile("nop");
-
+#ifndef MODBUS
+    for (long i = 0; i < 1000; i++) asm volatile("nop"); // Delay
     serial->print_string(GREETING_STRING);
+#endif
 
     main_loop(); // Run main loop until reset signal is caught
 }
@@ -56,45 +64,25 @@ void System::run() {
  * PRIMARY LOOP
  */
 [[noreturn]] void System::main_loop() {
-    char line[LINE_MAX_LENGTH];
-    uint8_t cnt = 0;
-    uint8_t ch;
-    bool line_too_long = false;
     while (true)  {
-        if ((ch = serial->read()) != SERIAL_NO_DATA) {
-            if (ch == '\n') {
-                uint8_t result;
-                if (!line_too_long) {
-                    if (line[0] == '?') { result = STATUS_OK; control->report_state(); }
-                    else if (line[0] == 'H') result = control->homing();
-                    else result = control->parse_line(line);
-                } else {
-                    result = STATUS_OVERFLOW;
-                    line_too_long = false;
-                }
-
-                report->status_message(result);
-                cnt = 0;
-            } else if ((ch == '\r') || (ch == ' ') || (ch == '\b')) asm volatile("nop"); // Skip CR or space symbol, do nothing
-            else if (ch == 0) cnt = 0; // When comes 0 then reset the line
-            else if (ch >= 'a' && ch <= 'z') line[cnt++] = ch - 'a' + 'A'; // Lowercase to uppercase
-            else if (cnt >= LINE_MAX_LENGTH) line_too_long = true; // Otherwise, set 'too long flag' and that's it
-            else line[cnt++] = ch; // Add char to line until line is under 80 chars
-            line[cnt] = 0; // Set EOL
-        }
-
+        control->read_serial_input();
         control->execute_realtime();
     }
 }
 
 motion_block_t *System::get_current_block() { return motion->get_current_block(); }
 void System::discard_current_block() { motion->discard_current_block(); }
+void System::command_executed(uint8_t status) {
+#ifndef MODBUS
+    report->status_message(status);
+#endif
+}
 
 // ------------------------------------
 //
 
 /**
- * Heartbeat function is executed in Systick timer, so it must fit in 1ms.
+ * Heartbeat function is executed in SysTick timer, so it must fit in 1ms.
  */
 void System::heartbeat() {
     control->vacuum_refresh();
@@ -117,5 +105,23 @@ void System::external_interrupt_limit() { control->end_stops_interrupt(); }
 /**
  * Communication callbacks
  */
-void System::usart_transmit() { serial->transmit(); }
-void System::usart_receive() { serial->receive(); }
+
+void System::silence_timer_fired() {
+    modbus->silence();
+}
+
+void System::usart_transmit() {
+#ifdef MODBUS
+    modbus->transmit();
+#else
+    serial->transmit();
+#endif
+}
+
+void System::usart_receive() {
+#ifdef MODBUS
+    modbus->receive();
+#else
+    serial->receive();
+#endif
+}

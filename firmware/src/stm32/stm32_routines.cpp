@@ -24,6 +24,8 @@
 
 #define EEPROM_START_ADDRESS    ((uint32_t) 0x0801FC00) // Last 1K page (127K offset)
 #define EEPROM_PAGE_SIZE        0x400
+#define TICKS_PER_MS            (F_CPU / 1000000UL)
+#define RS485_TRANSMIT_DELAY    (TICKS_PER_MS * 20)
 
 #ifdef WS8212LED
 volatile uint8_t WS8212LED_Buffer[24];
@@ -91,7 +93,8 @@ void stm32_config_timer(TIM_TypeDef* timer, uint16_t period, uint16_t prescaler,
     HAL_NVIC_SetPriorityGrouping((uint32_t)0x300); // NVIC_PriorityGroup_4
 
     auto IRQn = (IRQn_Type)0;
-    if (timer == TIM2) IRQn = TIM2_IRQn;
+    if (timer == TIM1) IRQn = TIM1_UP_IRQn;
+    else if (timer == TIM2) IRQn = TIM2_IRQn;
     else if (timer == TIM3) IRQn = TIM3_IRQn;
     else if (timer == TIM4) IRQn = TIM4_IRQn;
     if (IRQn != 0) {
@@ -106,10 +109,9 @@ void stm32_config_timer(TIM_TypeDef* timer, uint16_t period, uint16_t prescaler,
   */
 void Error_Handler() {}
 
-/*
+/**
  * STM32 initialization functions
  */
-
 void stm32_system_init() {
 
 }
@@ -509,18 +511,34 @@ void stm32_rs485_init() {
     HAL_NVIC_EnableIRQ(USART1_IRQn);
 }
 
+void stm32_rs485_silence_timer_init() {
+    __HAL_RCC_TIM1_CLK_ENABLE();
+    stm32_config_timer(TIM1, 1, 1, 0);
+    TIM1->ARR = 2188;  // 2188 = 72000000 / 115200 * 3.5 bytes
+    TIM1->PSC = 9;
+    TIM1->EGR = 1;
+    TIM1->SR &= ~TIM_SR_UIF;
+    TIM1->CR1 = TIM_CR1_CEN;
+    NVIC_EnableIRQ(TIM1_UP_IRQn);
+}
+
+void stm32_rs485_silence_timer_reset() {
+    TIM1->CNT = 0;
+    TIM1->SR &= ~TIM_SR_UIF;
+}
+
 void stm32_rs485_start_transmission() {
     DISABLE_IRQ
-    RS485_RW_PORT->BSRR = (1 << RS485_RW_BIT);
-    for (uint32_t i = 0; i < TICKS_PER_MICROSECOND; i++) asm volatile("nop"); // Delay 1ms to allow take a line
-    USART1->CR1 |= USART_CR1_TXEIE; // Turn on TX and interrupt
+    RS485_RW_PORT->BSRR = (1 << RS485_RW_BIT);                                  // Turn on TX driver
+    for (uint32_t i = 0; i < RS485_TRANSMIT_DELAY; i++) asm volatile("nop");    // Delay to allow take a line
+    USART1->CR1 |= USART_CR1_TXEIE;                                             // Turn on TX and interrupt
     ENABLE_IRQ
 }
 
 void stm32_rs485_stop_transmission() {
     DISABLE_IRQ
-    USART1->CR1 &= ~USART_CR1_TXEIE; // Turn off TX and interrupt
-    RS485_RW_PORT->BSRR = (1 << RS485_RW_BIT) << 16U;
+    USART1->CR1 &= ~USART_CR1_TXEIE;                                    // Turn off TX and interrupt
+    RS485_RW_PORT->BSRR = (1 << RS485_RW_BIT) << 16U;                   // Turn off TX driver
     ENABLE_IRQ
 }
 

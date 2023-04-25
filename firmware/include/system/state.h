@@ -36,6 +36,8 @@
 #define STATE_CYCLE_ROTATE          (1 << 4) // Cycle is running to rotate a component
 #define STATE_CYCLE_MOVE            (1 << 5) // Cycle is running to move a nozzle to specific position
 #define STATE_CYCLE_STOP            (1 << 6)
+#define STATE_CYCLE_LIGHT           (1 << 7)
+#define STATE_CYCLE_RELAY           (1 << 8)
 
 // Pick-place cycle states
 // -----------------------
@@ -47,6 +49,15 @@
 #define STATE_PNP_CYCLE_MOVE            (1 << 4)
 #define STATE_PNP_CYCLE_ALARM           (1 << 5)
 
+typedef struct {
+    uint32_t        light_color;
+    uint8_t         relay;          // {M100-104,M110-114}
+    uint8_t         nozzle;         // Pick-Place active nozzle
+    float           depth;          // Pick-Place cycle var indicates how deep the nozzle should go
+    float           angle;          // Pick-Place rotate cycle var indicates rotation angle
+    float           feed;           // Pick-Place or Move cycle feed rate
+} fsm_params_t;
+
 class State {
 private:
     uint8_t             state;              // Tracks the current system state
@@ -56,16 +67,19 @@ private:
 
     uint8_t             active_nozzle;
     volatile uint8_t    vac_wait_time;
+    float               vacuum[ROTARY_AXIS_N];
 
 public:
+    fsm_params_t        params;
+
     State();
 
     void        init();
 
-    bool        is_state(uint8_t value) const;
-    bool        has_state(uint8_t value) const;
-    uint8_t     get_state() const;
-    void        set_state(uint8_t st);
+    bool        is_state(uint16_t value) const;
+    bool        has_state(uint16_t value) const;
+    uint16_t    get_state() const;
+    void        set_state(uint16_t st);
 
     void        set_pick_place_state(uint8_t st);
     uint8_t     get_pick_place_state() const;
@@ -85,13 +99,16 @@ public:
 
     void        set_active_nozzle(uint8_t nozzle);
     uint8_t     get_active_nozzle() const;
+
+    float       get_vacuum(uint8_t nozzle) const;
+    void        set_vacuum(uint8_t nozzle, float value);
 };
 
 // State access methods
-inline uint8_t State::get_state() const { return this->state; }
-inline bool State::has_state(uint8_t value) const { return (this->state & value) != 0; }
-inline bool State::is_state(uint8_t value) const { return this->state == value; }
-inline void State::set_state(uint8_t st) { this->state = st; }
+inline uint16_t State::get_state() const { return this->state; }
+inline bool State::has_state(uint16_t value) const { return (this->state & value) != 0; }
+inline bool State::is_state(uint16_t value) const { return this->state == value; }
+inline void State::set_state(uint16_t st) { this->state = st; }
 
 inline uint8_t State::get_pick_place_state() const { return pick_place_state; }
 inline void State::set_pick_place_state(uint8_t st) { pick_place_state = st; }
@@ -110,5 +127,8 @@ inline bool State::is_vac_wait_timeout() const { return vac_wait_time == 0; }
 
 inline void State::set_active_nozzle(uint8_t nozzle) { active_nozzle = nozzle; }
 inline uint8_t State::get_active_nozzle() const { return active_nozzle; }
+
+inline float State::get_vacuum(uint8_t nozzle) const { return vacuum[nozzle]; }
+inline void State::set_vacuum(uint8_t nozzle, float value) { vacuum[nozzle] = value; }
 
 #endif // STATE_H

@@ -31,7 +31,7 @@ Steppers::Steppers(Settings *settings, State *state, Callbacks *callbacks) {
     this->state = state;
     this->callbacks = callbacks;
     this->step_port_invert_mask = 0xffff;
-    this->dir_port_invert_mask = 0;
+    this->dir_port_invert_mask = axis_to_port_direction_bits(AXIS_DIR_INVERT);
 
     // Initialize structs with zeroes
     memset(&profile, 0, sizeof(profile_prep_t));
@@ -99,7 +99,7 @@ void Steppers::pulse_start() {
         if (st.counters[idx] > st.exec_block->step_event_count) {
             st.step_out_bits |= step_pin_mask[idx];
             st.counters[idx] -= st.exec_block->step_event_count;
-            if (st.dir_out_bits & direction_pin_mask[idx])
+            if ((st.dir_out_bits ^ dir_port_invert_mask) & direction_pin_mask[idx])
                 state->decrement_position(idx);
             else
                 state->increment_position(idx);

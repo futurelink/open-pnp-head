@@ -28,10 +28,11 @@ Settings::Settings() {
 
 bool Settings::load() {
     steps_per_degree = ROTARY_STEP_PER_DEGREE; // 1/16 micro-stepping
-    steps_per_mm = LINEAR_STEP_PER_MM;
 
 #ifdef ROCKER_HEAD
     prepare_rocker_head_curve();
+#else
+    steps_per_mm = LINEAR_STEP_PER_MM;
 #endif
 
     return true;
@@ -141,6 +142,14 @@ void Settings::convert_linear_steps_to_mm(float *position, const int32_t *steps,
     position[idx] = get_rocker_axis_position(steps[idx]);
 #else
     position[idx] = (float) steps[idx] / (float) steps_per_mm;
+#endif
+}
+
+float Settings::convert_linear_steps_to_mm(const int32_t steps) const {
+#ifdef ROCKER_HEAD
+    return get_rocker_axis_position(steps);
+#else
+    return (float) steps / (float) steps_per_mm;
 #endif
 }
 

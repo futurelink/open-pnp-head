@@ -29,6 +29,7 @@ Serial::Serial() {
 
 void Serial::init() {
     stm32_rs485_init();
+    reset_read_buffer();
 }
 
 /**
@@ -105,6 +106,28 @@ void Serial::print_uint32_base10(uint32_t n) {
     }
 
     for (; i > 0; i--) write('0' + buf[i-1]);
+}
+
+/**
+ * Prints an uint8 variable in base 10.
+ * @param n
+ */
+void Serial::print_uint8_base10(uint8_t n) {
+    uint8_t digit_a = 0;
+    uint8_t digit_b = 0;
+    if (n >= 100) { // 100-255
+        digit_a = '0' + n % 10;
+        n /= 10;
+    }
+
+    if (n >= 10) { // 10-99
+        digit_b = '0' + n % 10;
+        n /= 10;
+    }
+
+    write('0' + n);
+    if (digit_b) write(digit_b);
+    if (digit_a) write(digit_a);
 }
 
 void Serial::print_float(float n, uint8_t decimal_places) {

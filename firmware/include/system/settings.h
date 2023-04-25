@@ -59,6 +59,7 @@ public:
 
     void convert_rotary_steps_to_degrees(float *position, const int32_t *steps, uint8_t n_axis) const;
     void convert_linear_steps_to_mm(float *position, const int32_t *steps, uint8_t n_axis) const;
+    float convert_linear_steps_to_mm(int32_t steps) const;
 
     float get_linear_max_travel();
 

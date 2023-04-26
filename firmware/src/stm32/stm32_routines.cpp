@@ -269,7 +269,11 @@ void stm32_limits_disable() {
 }
 
 uint16_t stm32_limits_get_state() {
-    return (LIMIT_PORT->IDR & LIMIT_MASK) ^ LIMIT_MASK; // Invert inputs
+    uint16_t pin_state = (LIMIT_PORT->IDR & LIMIT_MASK) ^ LIMIT_MASK; // Invert inputs
+    return ((pin_state & (1 << LIMIT_0_BIT)) ? 0b0001 : 0) |
+           ((pin_state & (1 << LIMIT_1_BIT)) ? 0b0010 : 0) |
+           ((pin_state & (1 << LIMIT_2_BIT)) ? 0b0100 : 0) |
+           ((pin_state & (1 << LIMIT_3_BIT)) ? 0b1000 : 0);
 }
 
 void stm32_eeprom_flush() {
@@ -511,10 +515,10 @@ void stm32_rs485_init() {
     HAL_NVIC_EnableIRQ(USART1_IRQn);
 }
 
-void stm32_rs485_silence_timer_init() {
+void stm32_rs485_silence_timer_init(uint16_t baud_rate) {
     __HAL_RCC_TIM1_CLK_ENABLE();
     stm32_config_timer(TIM1, 1, 1, 0);
-    TIM1->ARR = 2188;  // 2188 = 72000000 / 115200 * 3.5 bytes
+    TIM1->ARR = F_CPU / baud_rate * 3.5;
     TIM1->PSC = 9;
     TIM1->EGR = 1;
     TIM1->SR &= ~TIM_SR_UIF;

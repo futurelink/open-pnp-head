@@ -10,9 +10,7 @@
 #include "motion.h"
 #include "modbus.h"
 
-#include "peripheral/relay.h"
 #include "peripheral/vacuum.h"
-#include "peripheral/endstops.h"
 
 #include <cstdint>
 
@@ -60,8 +58,6 @@ protected:
     Motion          *motion;
 
     Steppers        *steppers;
-    Relay           *relay;
-    EndStops        *end_stops;
     Vacuum          *vacuum;
     Callbacks       *callbacks;
 
@@ -75,7 +71,6 @@ public:
     virtual void read_serial_input();
 
     uint8_t     homing();
-    uint8_t     execute_command();
     void        execute_realtime();
     void        sync();
 

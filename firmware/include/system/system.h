@@ -28,15 +28,13 @@
 #include "motion.h"
 
 #ifdef MODBUS
-#include "modbus.h"
+#include "modbus_impl.h"
 #include "modbus_control.h"
 #else
 #include "report.h"
 #include "text_control.h"
 #endif
 
-#include "peripheral/relay.h"
-#include "peripheral/endstops.h"
 #include "peripheral/vacuum.h"
 
 #include "stm32/stm32_routines.h"

@@ -18,7 +18,6 @@
   along with open-pnp-head.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <cstring>
 #include "functions.h"
 
 #include "system/control.h"
@@ -28,8 +27,6 @@
 
 Control::Control(Settings *settings, Motion *motion, State *state, Callbacks *callbacks) {
     this->steppers = new Steppers(settings, state, callbacks);
-    this->relay = new Relay();
-    this->end_stops = new EndStops();
     this->vacuum = new Vacuum();
 
     this->settings = settings;
@@ -40,8 +37,11 @@ Control::Control(Settings *settings, Motion *motion, State *state, Callbacks *ca
 
 void Control::init() {
     steppers->init();
-    relay->init();
-    end_stops->init();
+
+    stm32_relay_init();
+    stm32_relay_set_state(0x00);
+    stm32_limits_init();
+
     vacuum->init();
 }
 
@@ -51,7 +51,7 @@ void Control::init() {
  * tensioned.
  */
 void Control::check_and_disable_steppers() {
-    if (end_stops->all_at_zero()) stm32_steppers_disable();
+    if (stm32_limits_get_state() == 0) stm32_steppers_disable();
 }
 
 void Control::read_serial_input() {}
@@ -85,7 +85,7 @@ void Control::execute_realtime() {
         if (state->get_pick_place_state() == STATE_PNP_CYCLE_NONE) {
             // Pick-place cycle can only be started when nozzle is in neutral position and all end-stop
             // are not active (all heads are in 'upper' position)
-            if (motion->check_nozzle_in_position(state->params.nozzle) && end_stops->all_at_zero()) {
+            if (motion->check_nozzle_in_position(state->params.nozzle) && (stm32_limits_get_state() == 0)) {
                 // Start the cycle - move down to pick or place a component
                 state->set_active_nozzle(state->params.nozzle);
                 motion->move(state->params.nozzle, state->params.depth, state->params.feed);
@@ -127,7 +127,7 @@ void Control::execute_realtime() {
         } else if (state->get_pick_place_state() & STATE_PNP_CYCLE_MOVE_UP && state->has_state(STATE_CYCLE_STOP)) {
             // If we reached the destination (technically - 0 at Z axis), then drop the cycle.
             // Check if we have all end-stops set to 0, if not - then this is an error.
-            if (end_stops->all_at_zero()) {
+            if (stm32_limits_get_state() == 0) {
                 state->set_pick_place_state(STATE_PNP_CYCLE_NONE);
                 state->set_state(STATE_IDLE);
                 check_and_disable_steppers();
@@ -148,7 +148,7 @@ void Control::execute_realtime() {
         } else if ((state->get_pick_place_state() & STATE_PNP_CYCLE_MOVE) && state->has_state(STATE_CYCLE_STOP)) {
             // Check if we wanted to move to 0 position, which means end-stops should have gone 0,
             // if any end-stop is not 0, then this is an error.
-            if ((state->params.depth == 0) && !end_stops->all_at_zero()) {
+            if ((state->params.depth == 0) && (stm32_limits_get_state() != 0)) {
                 state->set_pick_place_state(STATE_PNP_CYCLE_ALARM);
                 callbacks->command_executed(STATUS_CODE_INVALID_TARGET);
             } else {
@@ -211,7 +211,7 @@ uint8_t Control::homing() {
 #endif
 }
 
-void Control::end_stops_interrupt() { end_stops->interrupt(); }
+void Control::end_stops_interrupt() { /*end_stops->interrupt();*/ }
 
 void Control::vacuum_set_value(uint8_t channel, uint16_t value) {
     vacuum->set_value(channel, value);
@@ -228,7 +228,7 @@ void Control::steppers_start() {
 }
 
 void Control::sync() {
-    state->end_stops = end_stops->get_state();
-    relay->set_state(state->relays);
+    state->end_stops = stm32_limits_get_state();
+    stm32_relay_set_state(state->relays);
     stm32_light_set_color(state->light_color);
 }

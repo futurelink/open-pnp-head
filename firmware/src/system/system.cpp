@@ -30,7 +30,7 @@ Settings       *System::settings     = new Settings();
 State          *System::state        = new State();
 Motion         *System::motion       = new Motion(settings, state);
 #ifdef MODBUS
-ModBus         *System::modbus       = new ModBus(0x55, settings, state);
+ModBus         *System::modbus       = new ModBusSlave(0x55, settings, state);
 Control        *System::control      = new ModBusControl(settings, modbus, motion, state, &callbacks);
 #else
 Serial         *System::serial       = new Serial();

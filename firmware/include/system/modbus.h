@@ -27,6 +27,9 @@
 #include "settings.h"
 #include "state.h"
 
+// Fist write register with greater number
+#define MULTI_WRITE_MSW_FIRST
+
 #define EXCEPTION_ILLEGAL_FUNCTION      1
 #define EXCEPTION_ILLEGAL_ADDRESS       2
 #define EXCEPTION_ILLEGAL_VALUE         3

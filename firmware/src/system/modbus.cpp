@@ -100,8 +100,13 @@ void ModBus::silence() {
                     if (crc16(rx_buffer, rx_len - 2) == ((rx_buffer[rx_len - 1] << 8) | rx_buffer[rx_len - 2])) {
                         switch (rx_buffer[1]) { // CRC is OK
                             case FUNCTION_WRITE_MULTI_REGISTERS:
-                                for (int i = reg_number-1; i >= 0 ; i--)
+#ifdef MULTI_WRITE_MSW_FIRST
+                                for (int i = reg_number - 1; i >= 0; i--) {
+#else
+                                for (int i = 0; i < reg_number ; i++) {
+#endif
                                     write_single_register(reg_base + i, (rx_buffer[7 + i * 2] << 8) | rx_buffer[8 + i * 2]);
+                                }
                                 memcpy(tx_buffer, rx_buffer, 6);
                                 add_crc_and_send(6);
                                 break;

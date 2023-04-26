@@ -185,7 +185,7 @@ uint8_t TextControl::execute_command() {
     get_state()->params.light_color = parser_state.light_color;
     get_state()->params.feed = parser_state.feed;
     get_state()->params.nozzle = parser_state.nozzle;
-    get_state()->params.relay = parser_state.relay;
+    get_state()->params.relays = parser_state.relay;
     get_state()->params.angle = parser_state.angle;
 
     switch (parser_state.line_state.command) {

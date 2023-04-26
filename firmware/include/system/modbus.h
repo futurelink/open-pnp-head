@@ -36,7 +36,6 @@
 #define FUNCTION_READ_INPUT_REGISTER    4
 #define FUNCTION_WRITE_COIL             5
 #define FUNCTION_WRITE_HOLDING_REGISTER 6
-#define FUNCTION_READ_DEVICE_ID         0x2b
 
 #define REGISTER_COIL_BASE              00001
 #define REGISTER_INPUT_BASE             10001
@@ -44,11 +43,13 @@
 #define REGISTER_HOLDING_BASE           40001
 
 #define NOZZLE_N                    4
-#define REGISTER_RELAYS             00001   // 16-bit coil register with relay state (read/write)
-#define REGISTER_END_STOPS          10001   // 16-bit input register with end-stop state (read-only)
+#define REGISTER_RELAYS             1       // 16-bit coil register with relay state (read/write)
+#define REGISTER_END_STOPS          10011   // 16-bit input register with end-stop state (read-only)
 #define REGISTER_STATE              30001   // 16-bit register holding current state (read-only)
 #define REGISTER_VAC_SENSOR_BASE    30002   // n * 2x16-bit registers with current vacuum level (read-only)
 #define REGISTER_POSITION_BASE      40001   // n * 2x16-bit registers holding position (read/write)
+#define REGISTER_LIGHT_MSW          40101   // 2x16-bit register holding 24-bit RGB value
+#define REGISTER_LIGHT_LSW          40102   // ---
 
 class ModBus {
 private:
@@ -87,7 +88,6 @@ private:
             0x8201, 0x42C0, 0x4380, 0x8341, 0x4100, 0x81C1, 0x8081, 0x4040
     };
 
-    enum Status { UNKNOWN, IDLE, WORKING };
     uint8_t         address;
 
     Settings        *settings;
@@ -98,8 +98,6 @@ private:
     uint8_t         tx_len;
     uint8_t         tx_buffer[TX_BUFFER_LEN];
 
-    float           tmp_pos;
-
     void            process_function();
     void            add_crc_and_send(uint8_t len);
 
@@ -109,14 +107,16 @@ private:
     void            send_analog_registers(uint16_t reg_base, uint16_t reg_number);
     void            write_single_coil(uint16_t reg_base, uint16_t value);
     void            write_single_register(uint16_t reg_base, uint16_t value);
+    void            send_exception(uint8_t function, uint8_t code);
 
+    bool            get_bit_reg_value(uint16_t reg);
+    uint8_t         set_bit_reg_value(uint16_t reg, bool value);
     uint8_t         set_16bit_reg_value(uint16_t reg, uint16_t value);
     uint16_t        get_16bit_reg_value(uint16_t reg);
     uint16_t        crc16(const unsigned char *buf, unsigned int len);
 
 public:
     explicit        ModBus(uint8_t address, Settings *settings, State *state);
-    void            set_fsm_params(fsm_params_t *params);
 
     void            init();
     void            receive();

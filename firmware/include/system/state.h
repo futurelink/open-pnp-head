@@ -51,7 +51,7 @@
 
 typedef struct {
     uint32_t        light_color;
-    uint8_t         relay;          // {M100-104,M110-114}
+    uint8_t         relays;          // {M100-104,M110-114}
     uint8_t         nozzle;         // Pick-Place active nozzle
     float           depth;          // Pick-Place cycle var indicates how deep the nozzle should go
     float           angle;          // Pick-Place rotate cycle var indicates rotation angle
@@ -60,7 +60,7 @@ typedef struct {
 
 class State {
 private:
-    uint8_t             state;              // Tracks the current system state
+    uint16_t            state;              // Tracks the current system state
     uint8_t             pick_place_state;   // Tracks pick-place cycle phases
     uint8_t             step_control;
     int32_t             *positions;
@@ -70,6 +70,10 @@ private:
     float               vacuum[ROTARY_AXIS_N];
 
 public:
+    uint8_t             end_stops;
+    uint8_t             relays;
+    uint32_t            light_color;
+
     fsm_params_t        params;
 
     State();

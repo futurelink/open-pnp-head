@@ -177,15 +177,15 @@ void Control::execute_realtime() {
     }
 
     // Light change state
-    else if (state->has_state(STATE_CYCLE_LIGHT)) {
-        stm32_light_set_color(state->params.light_color);
+    if (state->has_state(STATE_CYCLE_LIGHT)) {
+        state->light_color = state->params.light_color;
         state->set_state(STATE_IDLE);
         callbacks->command_executed(STATUS_OK);
     }
 
     // Relay change state
-    else if (state->has_state(STATE_CYCLE_RELAY)) {
-        relay->set_state(state->params.relay);
+    if (state->has_state(STATE_CYCLE_RELAY)) {
+        state->relays = state->params.relays;
         state->set_state(STATE_IDLE);
         callbacks->command_executed(STATUS_OK);
     }
@@ -193,6 +193,8 @@ void Control::execute_realtime() {
     if (state->has_state(STATE_CYCLE_PICK | STATE_CYCLE_PLACE | STATE_CYCLE_ROTATE | STATE_CYCLE_MOVE | STATE_CYCLE_STOP)) {
         steppers->prepare_buffer();     // Prepare and fill stepper buffer
     }
+
+    sync(); // Synchronize internal state with hardware
 }
 
 /**
@@ -223,4 +225,10 @@ void Control::steppers_start() {
     state->normal_motion();
     steppers->prepare_buffer();
     steppers->wake_up();
+}
+
+void Control::sync() {
+    state->end_stops = end_stops->get_state();
+    relay->set_state(state->relays);
+    stm32_light_set_color(state->light_color);
 }

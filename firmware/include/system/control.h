@@ -77,6 +77,7 @@ public:
     uint8_t     homing();
     uint8_t     execute_command();
     void        execute_realtime();
+    void        sync();
 
     void        end_stops_interrupt();
     void        steppers_start();

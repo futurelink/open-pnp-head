@@ -62,11 +62,11 @@ void ModBus::silence() {
 void ModBus::process_function() {
     if ((rx_len == 0) || (rx_buffer[0] != address)) return;
     switch (rx_buffer[1]) {
-        case FUNCTION_READ_COIL: // Read coil status
-        case FUNCTION_READ_INPUT: // Read input status
-        case FUNCTION_READ_HOLDING_REGISTER: // Read holding registers
-        case FUNCTION_READ_INPUT_REGISTER: // Read analog registers
-        case FUNCTION_WRITE_COIL: // Write single coil
+        case FUNCTION_READ_COIL:
+        case FUNCTION_READ_INPUT:
+        case FUNCTION_READ_HOLDING_REGISTER:
+        case FUNCTION_READ_INPUT_REGISTER:
+        case FUNCTION_WRITE_COIL:
         case FUNCTION_WRITE_HOLDING_REGISTER:
             if (rx_len == 8) {
                 uint16_t reg_base = 0 + ((rx_buffer[2] << 8) | (rx_buffer[3]));
@@ -77,9 +77,8 @@ void ModBus::process_function() {
                         case FUNCTION_READ_INPUT: send_input_status(reg_base, reg_number); break;
                         case FUNCTION_READ_HOLDING_REGISTER: send_holding_registers(reg_base, reg_number); break;
                         case FUNCTION_READ_INPUT_REGISTER: send_analog_registers(reg_base, reg_number); break;
-                        case FUNCTION_WRITE_COIL: write_single_coil(reg_base, reg_number /* value: 0xff00 or 0x0000 */);
-                        case FUNCTION_WRITE_HOLDING_REGISTER: write_single_register(reg_base, reg_number /* value */);
-                        default: break;
+                        case FUNCTION_WRITE_COIL: write_single_coil(reg_base, reg_number /* value: 0xff00 or 0x0000 */); break;
+                        case FUNCTION_WRITE_HOLDING_REGISTER: write_single_register(reg_base, reg_number /* value */); break;
                     }
                 }
             }
@@ -88,6 +87,7 @@ void ModBus::process_function() {
         case 15: // Write multiple coils
         case 16: // Write multiple registers
             break;
+        default: send_exception(rx_buffer[1], 0x01); break;
     }
 }
 
@@ -98,9 +98,11 @@ void ModBus::send_coil_status(uint16_t reg_base, uint16_t reg_number) {
     tx_buffer[2] = (uint8_t) ceilf((float) reg_number / 8);
 
     // add coil status bits
-    for (uint8_t i = 0; i < tx_buffer[2]; i++) {
-        tx_buffer[3 + i] = 0x55;
-        len++;
+    uint8_t byte = 0, i = 0;
+    while (i < reg_number) {
+        if (get_bit_reg_value(REGISTER_COIL_BASE + reg_base + i)) tx_buffer[3 + byte] |= (1 << (i % 8));
+        else tx_buffer[3 + byte] &= ~(1 << (i % 8));
+        if (++i % 8 == 0) { byte++; len++; }
     }
     add_crc_and_send(len);
 }
@@ -112,9 +114,11 @@ void ModBus::send_input_status(uint16_t reg_base, uint16_t reg_number) {
     tx_buffer[2] = (uint8_t) ceilf((float) reg_number / 8);
 
     // add input status bits
-    for (uint16_t i = 0; i < tx_buffer[2]; i++) {
-        tx_buffer[3 + i] = 0x55;
-        len++;
+    uint8_t byte = 0, i = 0;
+    while (i < reg_number) {
+        if (get_bit_reg_value(REGISTER_INPUT_BASE + reg_base + i)) tx_buffer[3 + byte] |= (1 << (i % 8));
+        else tx_buffer[3 + byte] &= ~(1 << (i % 8));
+        if (++i % 8 == 0) { byte++; len++; }
     }
     add_crc_and_send(len);
 }
@@ -151,8 +155,39 @@ void ModBus::send_analog_registers(uint16_t reg_base, uint16_t reg_number) {
     add_crc_and_send(len);
 }
 
+uint8_t ModBus::set_bit_reg_value(uint16_t reg, bool value) {
+    if ((reg >= REGISTER_RELAYS) && (reg < REGISTER_RELAYS + 4)) {
+        if (value) state->params.relays |= (1 << (reg - REGISTER_RELAYS)) /* offset */;
+        else state->params.relays &= ~(1 << (reg - REGISTER_RELAYS) /* offset */);
+        state->set_state(STATE_CYCLE_RELAY);
+        return 0;
+    }
+    return 0x02; // Illegal Data Address exception code
+}
+
+bool ModBus::get_bit_reg_value(uint16_t reg) {
+    if ((reg >= REGISTER_RELAYS) && (reg < REGISTER_RELAYS + 4))
+        return (state->relays & (1 << (reg - REGISTER_RELAYS))) != 0;
+    else if ((reg >= REGISTER_END_STOPS) && (reg < REGISTER_END_STOPS + 4))
+        return (state->end_stops & (1 << (reg - REGISTER_END_STOPS))) != 0;
+    return false;
+}
+
 uint8_t ModBus::set_16bit_reg_value(uint16_t reg, uint16_t value) {
-    if ((reg >= REGISTER_POSITION_BASE) && (reg < REGISTER_POSITION_BASE + NOZZLE_N * 4)) {
+    if (reg == REGISTER_LIGHT_MSW) {
+        state->params.light_color = (state->params.light_color & 0x0000ffff) | (value << 16);
+        state->set_state(STATE_CYCLE_LIGHT);
+        return 0;
+    }
+    else if (reg == REGISTER_LIGHT_LSW) {
+        state->params.light_color = (state->params.light_color & 0xffff0000) | value;
+        state->set_state(STATE_CYCLE_LIGHT);
+        return 0;
+    }
+    else if ((reg >= REGISTER_POSITION_BASE) && (reg < REGISTER_POSITION_BASE + NOZZLE_N * 4)) {
+        // Can not set position while status is not IDLE
+        if (!state->is_state(STATE_IDLE)) return 0x06;  // Slave Device Busy exception code
+
         uint8_t nozzle = (reg - REGISTER_POSITION_BASE) / 2;
         if (nozzle < ROTARY_AXIS_N) {
             if ((reg - REGISTER_POSITION_BASE) % 2) ((uint16_t *) &state->params.angle)[1] = value; // Write LS 16-bit word
@@ -174,11 +209,14 @@ uint8_t ModBus::set_16bit_reg_value(uint16_t reg, uint16_t value) {
         return 0;
     }
 
-    return 0xff; // Register unknown
+    return 0x02; // Illegal Data Address exception code
 }
 
 uint16_t ModBus::get_16bit_reg_value(uint16_t reg) {
     if (reg == REGISTER_STATE) return state->get_state();
+
+    else if (reg == REGISTER_LIGHT_MSW) return (state->params.light_color >> 16) & 0xffff;
+    else if (reg == REGISTER_LIGHT_LSW) return state->params.light_color & 0xffff;
 
     // Vacuum is 32-bit register that holds float value, so we send MS 16-bit word in REGISTER_VAC_SENSOR_n and
     // LS 16-bit word in REGISTER_VAC_SENSOR_n+1
@@ -207,33 +245,52 @@ uint16_t ModBus::get_16bit_reg_value(uint16_t reg) {
     return 0;
 }
 
+
+void ModBus::send_exception(uint8_t function, uint8_t code) {
+    tx_buffer[0] = address;
+    tx_buffer[1] = function | 0x80;
+    tx_buffer[2] = code;
+    add_crc_and_send(3);
+}
+
 void ModBus::write_single_coil(uint16_t reg_base, uint16_t value) {
     if ((value == 0xff00) || (value == 0)) {
-        // Send response
         tx_buffer[0] = address;
         tx_buffer[1] = FUNCTION_WRITE_COIL;
-        tx_buffer[2] = (reg_base >> 8) & 0xff;
-        tx_buffer[3] = reg_base & 0xff;
-        tx_buffer[4] = (value >> 8) & 0xff;
-        tx_buffer[5] = value & 0xff;
-        add_crc_and_send(6);
+        uint8_t result = set_bit_reg_value(REGISTER_COIL_BASE + reg_base, (value == 0xff00));
+        if (result == 0) {
+            // Send response
+            tx_buffer[2] = (reg_base >> 8) & 0xff;
+            tx_buffer[3] = reg_base & 0xff;
+            tx_buffer[4] = (value >> 8) & 0xff;
+            tx_buffer[5] = value & 0xff;
+            add_crc_and_send(6);
+        } else {
+            // Send exception
+            tx_buffer[1] |= 0x80;
+            tx_buffer[2] = result;
+            add_crc_and_send(3);
+        }
     }
 }
 
 void ModBus::write_single_register(uint16_t reg_base, uint16_t value) {
     uint8_t result = set_16bit_reg_value(REGISTER_HOLDING_BASE + reg_base, value);
+    tx_buffer[0] = address;
+    tx_buffer[1] = FUNCTION_WRITE_HOLDING_REGISTER;
     if (!result) {
         // Send response
-        tx_buffer[0] = address;
-        tx_buffer[1] = FUNCTION_WRITE_HOLDING_REGISTER;
         tx_buffer[2] = (reg_base >> 8) & 0xff;
         tx_buffer[3] = reg_base & 0xff;
         tx_buffer[4] = (value >> 8) & 0xff;
         tx_buffer[5] = value & 0xff;
+        add_crc_and_send(6);
     } else {
-        // Send exception here!
+        // Send exception
+        tx_buffer[1] |= 0x80;
+        tx_buffer[2] = result;
+        add_crc_and_send(3);
     }
-    add_crc_and_send(6);
 }
 
 void ModBus::add_crc_and_send(uint8_t len) {
@@ -257,4 +314,5 @@ uint16_t ModBus::crc16(const unsigned char *buf, unsigned int len) {
     }
     return crc;
 }
+
 

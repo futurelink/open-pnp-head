@@ -25,6 +25,8 @@
 
 State::State() {
     this->state = STATE_IDLE;
+    this->relays = 0;
+    this->light_color = 0;
     this->pick_place_state = 0;
     this->positions = (int32_t *) malloc(sizeof(int32_t) * AXIS_N);
 }
@@ -33,5 +35,6 @@ void State::init() {
     this->state = STATE_IDLE;
     this->pick_place_state = 0;
     memset(this->positions, 0, sizeof(int32_t) * AXIS_N);
+    memset(&this->params, 0, sizeof(fsm_params_t));
     set_end_motion();
 }
